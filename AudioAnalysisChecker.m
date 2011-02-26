@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 24-Feb-2011 10:27:31
+% Last Modified by GUIDE v2.5 25-Feb-2011 18:42:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -54,6 +54,9 @@ function AudioAnalysisChecker_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for AudioAnalysisChecker
 handles.output = hObject;
+
+set(handles.load_audio_button,'enable','off');
+set(handles.lock_range_checkbox,'Value',0);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -115,14 +118,12 @@ function prev_button_Callback(hObject, eventdata, handles)
 % hObject    handle to prev_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-
-% --- Executes on button press in delete_button.
-function delete_button_Callback(hObject, eventdata, handles)
-% hObject    handle to delete_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
+handles.current_voc = handles.current_voc - 1;
+if handles.current_voc < 1
+  handles.current_voc = length(handles.DataArray(:,1));
+end
+update(handles);
+guidata(hObject, handles);
 
 % --- Executes on button press in next_button.
 function next_button_Callback(hObject, eventdata, handles)
@@ -130,23 +131,87 @@ function next_button_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+handles.current_voc = handles.current_voc + 1;
+if handles.current_voc > length(handles.DataArray(:,1))
+  handles.current_voc = 1;
+end
+update(handles);
+guidata(hObject, handles);
+
+% --- Executes on button press in first_call_button.
+function first_call_button_Callback(hObject, eventdata, handles)
+% hObject    handle to first_call_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+handles.current_voc = 1;
+update(handles);
+guidata(hObject, handles);
+
+% --- Executes on button press in final_call_button.
+function final_call_button_Callback(hObject, eventdata, handles)
+% hObject    handle to final_call_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+handles.current_voc = length(handles.DataArray(:,1));
+update(handles);
+guidata(hObject, handles);
+
+function voc_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to voc_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of voc_edit as text
+%        str2double(get(hObject,'String')) returns contents of voc_edit as a double
+handles.current_voc = str2double(get(hObject,'string'));
+if handles.current_voc > length(handles.DataArray(:,1))
+  handles.current_voc = length(handles.DataArray(:,1));
+elseif handles.current_voc < 1
+  handles.current_voc = 1;
+end
+update(handles);
+guidata(hObject, handles);
 
 % --- Executes on button press in load_audio_button.
 function load_audio_button_Callback(hObject, eventdata, handles)
 % hObject    handle to load_audio_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-pathname = uigetdir(handles.marked_voc_pname,'Select folder where raw audio files are located');
+if isfield(handles,'audio_pname') && ...
+    exist(handles.audio_pname,'dir')
+  STARTDIR=handles.audio_pname;
+elseif ispref('audioanalysischecker','audio_pname')
+  STARTDIR=getpref('audioanalysischecker','audio_pname');
+else
+  STARTDIR=handles.marked_voc_pname;
+end
+
+pathname = uigetdir(STARTDIR,...
+  'Select folder where raw audio files are located');
 if isequal(pathname,0)
   return
 else
+  setpref('audioanalysischecker','audio_pname',pathname);
+  
   %determine which file it is from the marked filename
   files=dir([pathname '\' handles.marked_voc_fname(1:end-6) '.bin']);
   fnames={files.name};
+  set(handles.audio_file_text,'string',fnames{1},'tooltip',pathname);
   
   [fd,h,c] = OpenIoTechBinFile([pathname '\' fnames{1}]);
   [waveforms] = ReadChnlsFromFile(fd,h,c,10*250000,1);
   Fs = h.preFreq;
+  
+  channel=str2num(handles.marked_voc_fname(end-4));
+  
+  handles.waveform=waveforms{channel};
+  handles.Fs=Fs;
+  
+  handles.audio_pname=pathname;
+  
+  update(handles);
+  
+  guidata(hObject, handles);
 end
 
 % --- Executes on button press in load_marked_vocs_button.
@@ -154,11 +219,24 @@ function load_marked_vocs_button_Callback(hObject, eventdata, handles)
 % hObject    handle to load_marked_vocs_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-[filename, pathname] = uigetfile('*c*.mat', 'Select an analyzed batgadget file');
+
+if isfield(handles,'marked_voc_pname') && ...
+    exist(handles.marked_voc_pname,'dir')
+  DEFAULTNAME=handles.marked_voc_pname;
+elseif ispref('audioanalysischecker','marked_voc_pname')
+  DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
+else
+  DEFAULTNAME='';
+end
+
+[filename, pathname] = uigetfile('*c*.mat',...
+  'Select an analyzed batgadget file',DEFAULTNAME);
 if isequal(filename,0)
   return
 else
   load([pathname filename]);
+  set(handles.marked_file_text,'string',filename,'tooltip',pathname);
+  setpref('audioanalysischecker','marked_voc_pname',pathname);
 
   %sorting by the first column
   [NA INDX] = sort(DataArray(:,1),'ascend');
@@ -168,10 +246,19 @@ else
   handles.marked_voc_fname = filename;
   handles.marked_voc_pname = pathname;
   
+  set(handles.load_audio_button,'enable','on');
+  
+  handles.current_voc=1;
+  
   guidata(hObject, handles);
 end
 
 
+% --- Executes on button press in delete_button.
+function delete_button_Callback(hObject, eventdata, handles)
+% hObject    handle to delete_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
 
 % --- Executes on button press in save_button.
 function save_button_Callback(hObject, eventdata, handles)
@@ -185,3 +272,127 @@ function new_button_Callback(hObject, eventdata, handles)
 % hObject    handle to new_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+% --- Executes during object creation, after setting all properties.
+function voc_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to voc_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function low_dB_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to low_dB_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of low_dB_edit as text
+%        str2double(get(hObject,'String')) returns contents of low_dB_edit as a double
+update(handles);
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function low_dB_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to low_dB_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes on button press in lock_range_checkbox.
+function lock_range_checkbox_Callback(hObject, eventdata, handles)
+% hObject    handle to lock_range_checkbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of lock_range_checkbox
+update(handles);
+guidata(hObject,handles);
+
+
+
+function top_dB_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to top_dB_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of top_dB_edit as text
+%        str2double(get(hObject,'String')) returns contents of top_dB_edit as a double
+update(handles);
+guidata(hObject, handles);
+
+
+% --- Executes during object creation, after setting all properties.
+function top_dB_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to top_dB_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+function update(handles)
+
+set(handles.voc_edit,'string',num2str(handles.current_voc));
+
+axes(handles.wave_axes);cla;
+
+Fs = handles.Fs;
+
+voc_start_time = handles.DataArray(handles.current_voc,1);
+voc_end_time = handles.DataArray(handles.current_voc,3);
+voc_start_freq = handles.DataArray(handles.current_voc,2);
+voc_end_freq = handles.DataArray(handles.current_voc,4);
+
+buffer=1000;
+
+start_sample = round((voc_start_time + 8)*Fs);
+end_sample = round((voc_end_time + 8)*Fs);
+
+sample_range=start_sample-buffer:end_sample+buffer;
+dur=length(sample_range)./Fs;
+
+t=(sample_range)./Fs-8;
+plot(t,handles.waveform(sample_range),'k');
+axis tight;
+a=axis;
+axis([a(1:2) -5 5]);
+
+axes(handles.spect_axes);cla;
+[S,F,T,P] = spectrogram(handles.waveform(sample_range),...
+  128,120,256,Fs,'yaxis');
+imagesc(T,F,10*log10(P)); axis tight;
+max_db_str=num2str(round(max(max(10*log10(P)))));
+min_db_str=num2str(round(min(min(10*log10(P)))));
+set(handles.max_dB_text,'string',max_db_str);
+set(handles.min_dB_text,'string',min_db_str);
+if get(handles.lock_range_checkbox,'value') == 1
+  low_clim=str2double(get(handles.low_dB_edit,'string'));
+  top_clim=str2double(get(handles.top_dB_edit,'string'));
+  set(gca,'clim',[low_clim top_clim]);
+else
+  set(handles.top_dB_edit,'string',max_db_str);
+  set(handles.low_dB_edit,'string',min_db_str);
+end
+set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
+  num2str((0:25:125)'));
+
+
+text(buffer/Fs,voc_start_freq,'*','fontsize',25);
+text((end_sample-start_sample+1+buffer)/Fs,voc_end_freq,'*','fontsize',25);
