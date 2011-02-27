@@ -57,6 +57,7 @@ handles.output = hObject;
 
 set(handles.load_audio_button,'enable','off');
 set(handles.lock_range_checkbox,'Value',0);
+handles.samples=round(str2double(get(handles.sample_edit,'string')));
 
 % Update handles structure
 guidata(hObject, handles);
@@ -98,6 +99,9 @@ function sample_edit_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of sample_edit as text
 %        str2double(get(hObject,'String')) returns contents of sample_edit as a double
+handles.samples=round(str2double(get(hObject,'String')));
+update(handles);
+guidata(hObject, handles);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -172,48 +176,6 @@ end
 update(handles);
 guidata(hObject, handles);
 
-% --- Executes on button press in load_audio_button.
-function load_audio_button_Callback(hObject, eventdata, handles)
-% hObject    handle to load_audio_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isfield(handles,'audio_pname') && ...
-    exist(handles.audio_pname,'dir')
-  STARTDIR=handles.audio_pname;
-elseif ispref('audioanalysischecker','audio_pname')
-  STARTDIR=getpref('audioanalysischecker','audio_pname');
-else
-  STARTDIR=handles.marked_voc_pname;
-end
-
-pathname = uigetdir(STARTDIR,...
-  'Select folder where raw audio files are located');
-if isequal(pathname,0)
-  return
-else
-  setpref('audioanalysischecker','audio_pname',pathname);
-  
-  %determine which file it is from the marked filename
-  files=dir([pathname '\' handles.marked_voc_fname(1:end-6) '.bin']);
-  fnames={files.name};
-  set(handles.audio_file_text,'string',fnames{1},'tooltip',pathname);
-  
-  [fd,h,c] = OpenIoTechBinFile([pathname '\' fnames{1}]);
-  [waveforms] = ReadChnlsFromFile(fd,h,c,10*250000,1);
-  Fs = h.preFreq;
-  
-  channel=str2num(handles.marked_voc_fname(end-4));
-  
-  handles.waveform=waveforms{channel};
-  handles.Fs=Fs;
-  
-  handles.audio_pname=pathname;
-  
-  update(handles);
-  
-  guidata(hObject, handles);
-end
-
 % --- Executes on button press in load_marked_vocs_button.
 function load_marked_vocs_button_Callback(hObject, eventdata, handles)
 % hObject    handle to load_marked_vocs_button (see GCBO)
@@ -250,7 +212,53 @@ else
   
   handles.current_voc=1;
   
+  handles=load_audio(handles);
+  
   guidata(hObject, handles);
+end
+
+% --- Executes on button press in load_audio_button.
+function load_audio_button_Callback(hObject, eventdata, handles)
+% hObject    handle to load_audio_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+handles=load_audio(handles);
+guidata(hObject, handles);
+
+function handles=load_audio(handles)
+if isfield(handles,'audio_pname') && ...
+    exist(handles.audio_pname,'dir')
+  STARTDIR=handles.audio_pname;
+elseif ispref('audioanalysischecker','audio_pname')
+  STARTDIR=getpref('audioanalysischecker','audio_pname');
+else
+  STARTDIR=handles.marked_voc_pname;
+end
+
+pathname = uigetdir(STARTDIR,...
+  'Select folder where raw audio files are located');
+if isequal(pathname,0)
+  return
+else
+  setpref('audioanalysischecker','audio_pname',pathname);
+  
+  %determine which file it is from the marked filename
+  files=dir([pathname '\' handles.marked_voc_fname(1:end-6) '.bin']);
+  fnames={files.name};
+  set(handles.audio_file_text,'string',fnames{1},'tooltip',pathname);
+  
+  [fd,h,c] = OpenIoTechBinFile([pathname '\' fnames{1}]);
+  [waveforms] = ReadChnlsFromFile(fd,h,c,10*250000,1);
+  Fs = h.preFreq;
+  
+  channel=str2num(handles.marked_voc_fname(end-4));
+  
+  handles.waveform=waveforms{channel};
+  handles.Fs=Fs;
+  
+  handles.audio_pname=pathname;
+  
+  update(handles);
 end
 
 
@@ -259,6 +267,13 @@ function delete_button_Callback(hObject, eventdata, handles)
 % hObject    handle to delete_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+handles.DataArray(handles.current_voc,:)=[];
+if handles.current_voc > length(handles.DataArray(:,1))
+  handles.current_voc=length(handles.DataArray(:,1));
+end
+update(handles);
+guidata(hObject, handles);
+
 
 % --- Executes on button press in save_button.
 function save_button_Callback(hObject, eventdata, handles)
@@ -273,6 +288,8 @@ function new_button_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % --- Executes during object creation, after setting all properties.
+
+
 function voc_edit_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to voc_edit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -359,25 +376,38 @@ voc_start_time = handles.DataArray(handles.current_voc,1);
 voc_end_time = handles.DataArray(handles.current_voc,3);
 voc_start_freq = handles.DataArray(handles.current_voc,2);
 voc_end_freq = handles.DataArray(handles.current_voc,4);
-
-buffer=1000;
+dur=voc_end_time-voc_start_time;
 
 start_sample = round((voc_start_time + 8)*Fs);
 end_sample = round((voc_end_time + 8)*Fs);
 
+buffer=round((handles.samples-(end_sample-start_sample+1))/2);
+if buffer<=0
+  buffer=100;
+end
 sample_range=start_sample-buffer:end_sample+buffer;
-dur=length(sample_range)./Fs;
+X=handles.waveform(sample_range)-mean(handles.waveform(sample_range));
 
 t=(sample_range)./Fs-8;
-plot(t,handles.waveform(sample_range),'k');
+plot(t,X,'k');
 axis tight;
 a=axis;
 axis([a(1:2) -5 5]);
 
+%displaying markings:
+hold on;
+plot([voc_start_time voc_start_time],[-5 5],'color','r');
+plot([voc_end_time voc_end_time],[-5 5],'color','r');
+hold off;
+
+%plotting spectrogram:
 axes(handles.spect_axes);cla;
-[S,F,T,P] = spectrogram(handles.waveform(sample_range),...
-  128,120,256,Fs,'yaxis');
-imagesc(T,F,10*log10(P)); axis tight;
+[S,F,T,P] = spectrogram(X,128,120,256,Fs,'yaxis');
+imagesc(T,F,10*log10(abs(P))); axis tight;
+set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
+  num2str((0:25:125)'),'xticklabel','');
+
+%worrying about the clim for the spectrogram:
 max_db_str=num2str(round(max(max(10*log10(P)))));
 min_db_str=num2str(round(min(min(10*log10(P)))));
 set(handles.max_dB_text,'string',max_db_str);
@@ -390,9 +420,8 @@ else
   set(handles.top_dB_edit,'string',max_db_str);
   set(handles.low_dB_edit,'string',min_db_str);
 end
-set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
-  num2str((0:25:125)'));
 
-
-text(buffer/Fs,voc_start_freq,'*','fontsize',25);
-text((end_sample-start_sample+1+buffer)/Fs,voc_end_freq,'*','fontsize',25);
+text(buffer/Fs,voc_start_freq,'X','fontsize',16,...
+  'HorizontalAlignment','center','verticalalignment','middle');
+text(buffer/Fs+dur,voc_end_freq,'X','fontsize',16,...
+  'HorizontalAlignment','center','verticalalignment','middle');
