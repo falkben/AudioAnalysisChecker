@@ -82,14 +82,24 @@ function zoomin_button_Callback(hObject, eventdata, handles)
 % hObject    handle to zoomin_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if handles.samples/2/handles.Fs < ...
+    (handles.DataArray(handles.current_voc,3)-handles.DataArray(handles.current_voc,1))
+  return
+end
+handles.samples=round(handles.samples/2);
+set(handles.sample_edit,'string',num2str(handles.samples));
+update(handles);
+guidata(hObject, handles);
 
 % --- Executes on button press in zoomout_button.
 function zoomout_button_Callback(hObject, eventdata, handles)
 % hObject    handle to zoomout_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+handles.samples=round(handles.samples*2);
+set(handles.sample_edit,'string',num2str(handles.samples));
+update(handles);
+guidata(hObject, handles);
 
 
 function sample_edit_Callback(hObject, eventdata, handles)
@@ -395,10 +405,26 @@ a=axis;
 axis([a(1:2) -5 5]);
 
 %displaying markings:
+all_start_times=handles.DataArray(:,1);
+all_end_times=handles.DataArray(:,3);
+time_range=sample_range([1 end])./Fs-8;
+
+start_indx=all_start_times>=time_range(1)...
+  & all_start_times<=time_range(2);
+end_indx=all_end_times>=time_range(1)...
+  & all_end_times<=time_range(2);
+
+disp_start_times=all_start_times(start_indx);
+disp_end_times=all_end_times(end_indx);
+
 hold on;
 plot([voc_start_time voc_start_time],[-5 5],'color','r');
 plot([voc_end_time voc_end_time],[-5 5],'color','r');
 hold off;
+text(disp_start_times,zeros(length(disp_start_times),1),...
+  'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
+text(disp_end_times,zeros(length(disp_end_times),1),...
+  'X','HorizontalAlignment','center','color','b','fontsize',14,'fontweight','bold');
 
 %plotting spectrogram:
 axes(handles.spect_axes);cla;
@@ -421,7 +447,9 @@ else
   set(handles.low_dB_edit,'string',min_db_str);
 end
 
-text(buffer/Fs,voc_start_freq,'X','fontsize',16,...
-  'HorizontalAlignment','center','verticalalignment','middle');
-text(buffer/Fs+dur,voc_end_freq,'X','fontsize',16,...
-  'HorizontalAlignment','center','verticalalignment','middle');
+hold on;
+plot(disp_start_times-voc_start_time+buffer/Fs,handles.DataArray(start_indx,2),...
+  'xc','markersize',15,'linewidth',2.5);
+plot(disp_end_times-voc_start_time+buffer/Fs,handles.DataArray(end_indx,4),...
+  'xb','markersize',15,'linewidth',2.5);
+hold off;
