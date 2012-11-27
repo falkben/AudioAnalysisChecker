@@ -60,7 +60,6 @@ varargout{1} = handles.output;
 function handles = initialize(handles)
 set(handles.lock_range_checkbox,'Value',0);
 handles.samples=round(str2double(get(handles.sample_edit,'string')));
-set(handles.load_marked_vocs_menu,'enable','off');
 
 
 function handles=load_audio(handles)
@@ -85,11 +84,20 @@ if isequal(filename,0)
   return
 end
 
+handles = load_marked_vocs(handles);
+
+handles.audio_pname=pathname;
+handles.audio_fname=filename;
+
+if isempty(handles.DataArray)
+  return;
+end
+
 %determine which file it is from the marked filename
 if strcmp(filename(end-2:end),'mat') %loading from nidaq_matlab_tools
-  warning off;
+  warning('off','MATLAB:loadobj');
   audio=open([pathname '\' filename]);
-  warning on;
+  warning('on','MATLAB:loadobj');
   waveforms = audio.data;
   Fs = audio.SR;
 elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
@@ -115,12 +123,7 @@ end
 handles.waveform=waveforms(:,str2double(channel));
 handles.Fs=Fs;
 
-handles.audio_pname=pathname;
-handles.audio_fname=filename;
-
 handles.current_voc=1;
-
-set(handles.load_marked_vocs_menu,'enable','on');
 
 update(handles);
 
@@ -135,27 +138,31 @@ else
   DEFAULTNAME='';
 end
 
-[filename, pathname] = uigetfile('*c*.mat',...
-  'Select an analyzed batgadget file',DEFAULTNAME);
-if isequal(filename,0)
-  return
-else
-  load([pathname filename]);
-  set(handles.marked_file_text,'string',filename,'tooltip',pathname);
-  setpref('audioanalysischecker','marked_voc_pname',pathname);
-
-  %sorting by the first column
-  [NA INDX] = sort(DataArray(:,1),'ascend');
-  DataArray = (DataArray(INDX,:));
-  
-  handles.DataArray = DataArray;
-  handles.marked_voc_fname = filename;
-  handles.marked_voc_pname = pathname;
-  
-  handles=load_audio(handles);
-  
-  guidata(hObject, handles);
+if ~exist([DEFAULTNAME 'sound_data.mat'],'file')
+  [~, DEFAULTNAME] = uigetfile('sound_data.mat',...
+    'Select processed sound data (sound_data.mat)',DEFAULTNAME);
+  if isequal(DEFAULTNAME,0)
+    return
+  end
 end
+
+load([DEFAULTNAME 'sound_data.mat']);
+setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
+
+all_trialcodes={extracted_sound_data.trialcode};
+trialcode = determine_vicon_trialcode([handles.audio_pname handles.audio_fname]);
+indx=find(strcmp(all_trialcodes,trialcode));
+
+if isempty(indx)
+  handles.DataArray=[];
+  handles.sound_data_indx=[];
+  return;
+end
+handles.sound_data_indx = indx;
+vicon_trigger_offset = (8*300 - length(extracted_sound_data(indx).centroid) + 1)/300;
+handles.DataArray = extracted_sound_data(indx).voc_t + vicon_trigger_offset;
+
+
 
 
 function update(handles)
@@ -165,53 +172,41 @@ axes(handles.wave_axes);cla;
 
 Fs = handles.Fs;
 
-voc_start_time = handles.DataArray(handles.current_voc,1);
-voc_end_time = handles.DataArray(handles.current_voc,3);
-voc_start_freq = handles.DataArray(handles.current_voc,2);
-voc_end_freq = handles.DataArray(handles.current_voc,4);
-dur=voc_end_time-voc_start_time;
+voc_time = handles.DataArray(handles.current_voc);
 
-start_sample = round((voc_start_time + 8)*Fs);
-end_sample = round((voc_end_time + 8)*Fs);
+voc_sample = round((voc_time + 8)*Fs);
 
-buffer=round((handles.samples-(end_sample-start_sample+1))/2);
-if buffer<=0
-  buffer=100;
-end
-sample_range=start_sample-buffer:end_sample+buffer;
-X=handles.waveform(sample_range)-mean(handles.waveform(sample_range));
+buffer=handles.samples/2;
+sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.waveform));
+X=handles.waveform(sample_range);
 
 t=(sample_range)./Fs-8;
-plot(t,X,'k');
+plot(t(1:3:end),X(1:3:end),'k');
 axis tight;
 a=axis;
-axis([a(1:2) -5 5]);
+axis([a(1:2) -10 10]);
 
 %displaying markings:
-all_start_times=handles.DataArray(:,1);
-all_end_times=handles.DataArray(:,3);
-time_range=sample_range([1 end])./Fs-8;
+all_voc_times=handles.DataArray;
+time_range=t([1 end]);
 
-start_indx=all_start_times>=time_range(1)...
-  & all_start_times<=time_range(2);
-end_indx=all_end_times>=time_range(1)...
-  & all_end_times<=time_range(2);
+voc_t_indx=all_voc_times>=time_range(1)...
+  & all_voc_times<=time_range(2);
 
-disp_start_times=all_start_times(start_indx);
-disp_end_times=all_end_times(end_indx);
+disp_voc_times=all_voc_times(voc_t_indx);
 
 hold on;
-plot([voc_start_time voc_start_time],[-5 5],'color','r');
-plot([voc_end_time voc_end_time],[-5 5],'color','r');
+for k=1:length(disp_voc_times)
+  plot([disp_voc_times(k) disp_voc_times(k)],[-10 10],'color','r');
+end
+plot([voc_time voc_time],[-10 10],'color',[.6 .6 1]);
 hold off;
-text(disp_start_times,zeros(length(disp_start_times),1),...
+text(disp_voc_times,zeros(length(disp_voc_times),1),...
   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
-text(disp_end_times,zeros(length(disp_end_times),1),...
-  'X','HorizontalAlignment','center','color','b','fontsize',14,'fontweight','bold');
 
 %plotting spectrogram:
 axes(handles.spect_axes);cla;
-[S,F,T,P] = spectrogram(X,128,120,256,Fs,'yaxis');
+[S,F,T,P] = spectrogram(X,256,250,512,Fs,'yaxis');
 imagesc(T,F,10*log10(abs(P))); axis tight;
 set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
   num2str((0:25:125)'),'xticklabel','');
@@ -229,24 +224,13 @@ else
   set(handles.top_dB_edit,'string',max_db_str);
   set(handles.low_dB_edit,'string',min_db_str);
 end
-
-hold on;
-plot(disp_start_times-voc_start_time+buffer/Fs,handles.DataArray(start_indx,2),...
-  'xc','markersize',15,'linewidth',2.5);
-plot(disp_end_times-voc_start_time+buffer/Fs,handles.DataArray(end_indx,4),...
-  'xb','markersize',15,'linewidth',2.5);
-hold off;
-
+colormap('hot')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 % --- Executes on button press in zoomin_button.
 function zoomin_button_Callback(hObject, eventdata, handles)
-if handles.samples/2/handles.Fs < ...
-    (handles.DataArray(handles.current_voc,3)-handles.DataArray(handles.current_voc,1))
-  return
-end
 handles.samples=round(handles.samples/2);
 set(handles.sample_edit,'string',num2str(handles.samples));
 update(handles);
@@ -279,7 +263,7 @@ end
 function prev_button_Callback(hObject, eventdata, handles)
 handles.current_voc = handles.current_voc - 1;
 if handles.current_voc < 1
-  handles.current_voc = length(handles.DataArray(:,1));
+  handles.current_voc = 1;
 end
 update(handles);
 guidata(hObject, handles);
@@ -287,8 +271,8 @@ guidata(hObject, handles);
 % --- Executes on button press in next_button.
 function next_button_Callback(hObject, eventdata, handles)
 handles.current_voc = handles.current_voc + 1;
-if handles.current_voc > length(handles.DataArray(:,1))
-  handles.current_voc = 1;
+if handles.current_voc > length(handles.DataArray)
+  handles.current_voc = length(handles.DataArray);
 end
 update(handles);
 guidata(hObject, handles);
@@ -301,7 +285,7 @@ guidata(hObject, handles);
 
 % --- Executes on button press in final_call_button.
 function final_call_button_Callback(hObject, eventdata, handles)
-handles.current_voc = length(handles.DataArray(:,1));
+handles.current_voc = length(handles.DataArray);
 update(handles);
 guidata(hObject, handles);
 
@@ -309,8 +293,8 @@ function voc_edit_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of voc_edit as text
 %        str2double(get(hObject,'String')) returns contents of voc_edit as a double
 handles.current_voc = str2double(get(hObject,'string'));
-if handles.current_voc > length(handles.DataArray(:,1))
-  handles.current_voc = length(handles.DataArray(:,1));
+if handles.current_voc > length(handles.DataArray)
+  handles.current_voc = length(handles.DataArray);
 elseif handles.current_voc < 1
   handles.current_voc = 1;
 end
@@ -319,9 +303,9 @@ guidata(hObject, handles);
 
 % --- Executes on button press in delete_button.
 function delete_button_Callback(hObject, eventdata, handles)
-handles.DataArray(handles.current_voc,:)=[];
-if handles.current_voc > length(handles.DataArray(:,1))
-  handles.current_voc=length(handles.DataArray(:,1));
+handles.DataArray(handles.current_voc)=[];
+if handles.current_voc > length(handles.DataArray)
+  handles.current_voc=length(handles.DataArray);
 end
 update(handles);
 guidata(hObject, handles);
@@ -329,6 +313,12 @@ guidata(hObject, handles);
 
 % --- Executes on button press in new_button.
 function new_button_Callback(hObject, eventdata, handles)
+axes(handles.wave_axes);
+[x,y] = ginput(1);
+handles.DataArray(end+1)=x;
+handles.DataArray = sort(handles.DataArray);
+update(handles);
+guidata(hObject, handles);
 
 
 function voc_edit_CreateFcn(hObject, eventdata, handles)
@@ -392,14 +382,35 @@ function open_menu_Callback(hObject, eventdata, handles)
 handles=load_audio(handles);
 guidata(hObject, handles);
 
-
-% --------------------------------------------------------------------
-function load_marked_vocs_menu_Callback(hObject, eventdata, handles)
-handles = load_marked_vocs(handles);
-guidata(hObject, handles);
-
 % --------------------------------------------------------------------
 function save_menu_Callback(hObject, eventdata, handles)
+if isfield(handles,'marked_voc_pname') && ...
+    exist(handles.marked_voc_pname,'dir')
+  DEFAULTNAME=handles.marked_voc_pname;
+elseif ispref('audioanalysischecker','marked_voc_pname')
+  DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
+else
+  DEFAULTNAME='';
+end
+
+if ~exist([DEFAULTNAME 'sound_data.mat'],'file')
+  [~, DEFAULTNAME] = uigetfile('sound_data.mat',...
+    'Select processed sound data (sound_data.mat)',DEFAULTNAME);
+  if isequal(DEFAULTNAME,0)
+    return
+  end
+end
+
+load([DEFAULTNAME 'sound_data.mat']);
+setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
+
+indx=handles.sound_data_indx;
+vicon_trigger_offset = (8*300 - length(extracted_sound_data(indx).centroid) + 1)/300;
+extracted_sound_data(indx).voc_t=handles.DataArray - vicon_trigger_offset;
+extracted_sound_data(indx).voc_checked=1;
+
+save([DEFAULTNAME 'sound_data.mat'],'extracted_sound_data');
+disp(['Saved at ' datestr(now,'HH:MM PM')]);
 
 % --------------------------------------------------------------------
 function close_menu_Callback(hObject, eventdata, handles)
