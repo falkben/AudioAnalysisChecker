@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 16-Oct-2012 14:30:56
+% Last Modified by GUIDE v2.5 29-Nov-2012 15:19:48
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -60,12 +60,15 @@ varargout{1} = handles.output;
 function handles = initialize(handles)
 set(handles.lock_range_checkbox,'Value',0);
 handles.samples=round(str2double(get(handles.sample_edit,'string')));
+axes(handles.wave_axes);cla;
+axes(handles.spect_axes);cla;
+handles.internal = [];
 
 
 function handles=load_audio(handles)
-if isfield(handles,'audio_pname') && ...
-    exist(handles.audio_pname,'dir')
-  pathname=handles.audio_pname;
+if isfield(handles.internal,'audio_pname') && ...
+    exist(handles.internal.audio_pname,'dir')
+  pathname=handles.internal.audio_pname;
 elseif ispref('audioanalysischecker','audio_pname')
   pathname=getpref('audioanalysischecker','audio_pname');
 else
@@ -84,12 +87,12 @@ if isequal(filename,0)
   return
 end
 
+handles.internal.audio_pname=pathname;
+handles.internal.audio_fname=filename;
+
 handles = load_marked_vocs(handles);
 
-handles.audio_pname=pathname;
-handles.audio_fname=filename;
-
-if isempty(handles.DataArray)
+if isempty(handles.internal.DataArray)
   return;
 end
 
@@ -120,18 +123,20 @@ if isempty(channel)
   return;
 end
 
-handles.waveform=waveforms(:,str2double(channel));
-handles.Fs=Fs;
+handles.internal.waveform=waveforms(:,str2double(channel));
+handles.internal.Fs=Fs;
 
-handles.current_voc=1;
+handles.internal.current_voc=1;
+
+set(gcf,'Name',['AudioAnalysisChecker: ' handles.internal.audio_fname]);
 
 update(handles);
 
 
 function handles = load_marked_vocs(handles)
-if isfield(handles,'marked_voc_pname') && ...
-    exist(handles.marked_voc_pname,'dir')
-  DEFAULTNAME=handles.marked_voc_pname;
+if isfield(handles.internal,'marked_voc_pname') && ...
+    exist(handles.internal.marked_voc_pname,'dir')
+  DEFAULTNAME=handles.internal.marked_voc_pname;
 elseif ispref('audioanalysischecker','marked_voc_pname')
   DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
 else
@@ -150,35 +155,37 @@ load([DEFAULTNAME 'sound_data.mat']);
 setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
 
 all_trialcodes={extracted_sound_data.trialcode};
-trialcode = determine_vicon_trialcode([handles.audio_pname handles.audio_fname]);
+trialcode = determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]);
 indx=find(strcmp(all_trialcodes,trialcode));
 
 if isempty(indx)
-  handles.DataArray=[];
-  handles.sound_data_indx=[];
+  handles.internal.DataArray=[];
+  handles.internal.sound_data_indx=[];
+  disp('Vicon trial absent.')
   return;
 end
-handles.sound_data_indx = indx;
+handles.internal.sound_data_indx = indx;
 vicon_trigger_offset = (8*300 - length(extracted_sound_data(indx).centroid) + 1)/300;
-handles.DataArray = extracted_sound_data(indx).voc_t + vicon_trigger_offset;
+handles.internal.net_crossings = extracted_sound_data(indx).net_crossings./300 - 8 + vicon_trigger_offset;
+handles.internal.DataArray = extracted_sound_data(indx).voc_t + vicon_trigger_offset;
 
 
 
 
 function update(handles)
-set(handles.voc_edit,'string',num2str(handles.current_voc));
+set(handles.voc_edit,'string',num2str(handles.internal.current_voc));
 
 axes(handles.wave_axes);cla;
 
-Fs = handles.Fs;
+Fs = handles.internal.Fs;
 
-voc_time = handles.DataArray(handles.current_voc);
+voc_time = handles.internal.DataArray(handles.internal.current_voc);
 
 voc_sample = round((voc_time + 8)*Fs);
 
 buffer=handles.samples/2;
-sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.waveform));
-X=handles.waveform(sample_range);
+sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.internal.waveform));
+X=handles.internal.waveform(sample_range);
 
 t=(sample_range)./Fs-8;
 plot(t(1:3:end),X(1:3:end),'k');
@@ -187,44 +194,55 @@ a=axis;
 axis([a(1:2) -10 10]);
 
 %displaying markings:
-all_voc_times=handles.DataArray;
+all_voc_times=handles.internal.DataArray;
 time_range=t([1 end]);
 
 voc_t_indx=all_voc_times>=time_range(1)...
   & all_voc_times<=time_range(2);
 
 disp_voc_times=all_voc_times(voc_t_indx);
-
+voc_nums=find(voc_t_indx);
 hold on;
 for k=1:length(disp_voc_times)
   plot([disp_voc_times(k) disp_voc_times(k)],[-10 10],'color','r');
 end
+text(disp_voc_times,-8*ones(length(voc_nums),1),num2str(voc_nums),...
+  'horizontalalignment','center');
 plot([voc_time voc_time],[-10 10],'color',[.6 .6 1]);
 hold off;
 text(disp_voc_times,zeros(length(disp_voc_times),1),...
   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
 
+%displaying net crossings
+hold on;
+net_crossings = handles.internal.net_crossings;
+plot([net_crossings(1) net_crossings(1)],[-5 5],'b','linewidth',2);
+plot([net_crossings(2) net_crossings(2)],[-5 5],'b','linewidth',2);
+hold off;
+
 %plotting spectrogram:
 axes(handles.spect_axes);cla;
-[S,F,T,P] = spectrogram(X,256,250,512,Fs,'yaxis');
-imagesc(T,F,10*log10(abs(P))); axis tight;
-set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
-  num2str((0:25:125)'),'xticklabel','');
+if get(handles.plot_spectrogram_checkbox,'value')
+  [S,F,T,P] = spectrogram(X,256,250,512,Fs,'yaxis');
+  imagesc(T,F,10*log10(abs(P))); axis tight;
+  set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
+    num2str((0:25:125)'),'xticklabel','');
 
-%worrying about the clim for the spectrogram:
-max_db_str=num2str(round(max(max(10*log10(P)))));
-min_db_str=num2str(round(min(min(10*log10(P)))));
-set(handles.max_dB_text,'string',max_db_str);
-set(handles.min_dB_text,'string',min_db_str);
-if get(handles.lock_range_checkbox,'value') == 1
-  low_clim=str2double(get(handles.low_dB_edit,'string'));
-  top_clim=str2double(get(handles.top_dB_edit,'string'));
-  set(gca,'clim',[low_clim top_clim]);
-else
-  set(handles.top_dB_edit,'string',max_db_str);
-  set(handles.low_dB_edit,'string',min_db_str);
+  %worrying about the clim for the spectrogram:
+  max_db_str=num2str(round(max(max(10*log10(P)))));
+  min_db_str=num2str(round(min(min(10*log10(P)))));
+  set(handles.max_dB_text,'string',max_db_str);
+  set(handles.min_dB_text,'string',min_db_str);
+  if get(handles.lock_range_checkbox,'value') == 1
+    low_clim=str2double(get(handles.low_dB_edit,'string'));
+    top_clim=str2double(get(handles.top_dB_edit,'string'));
+    set(gca,'clim',[low_clim top_clim]);
+  else
+    set(handles.top_dB_edit,'string',max_db_str);
+    set(handles.low_dB_edit,'string',min_db_str);
+  end
+  colormap('hot')
 end
-colormap('hot')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -261,64 +279,64 @@ end
 
 % --- Executes on button press in prev_button.
 function prev_button_Callback(hObject, eventdata, handles)
-handles.current_voc = handles.current_voc - 1;
-if handles.current_voc < 1
-  handles.current_voc = 1;
+handles.internal.current_voc = handles.internal.current_voc - 1;
+if handles.internal.current_voc < 1
+  handles.internal.current_voc = 1;
 end
 update(handles);
 guidata(hObject, handles);
 
 % --- Executes on button press in next_button.
 function next_button_Callback(hObject, eventdata, handles)
-handles.current_voc = handles.current_voc + 1;
-if handles.current_voc > length(handles.DataArray)
-  handles.current_voc = length(handles.DataArray);
+handles.internal.current_voc = handles.internal.current_voc + 1;
+if handles.internal.current_voc > length(handles.internal.DataArray)
+  handles.internal.current_voc = length(handles.internal.DataArray);
 end
 update(handles);
 guidata(hObject, handles);
 
 % --- Executes on button press in first_call_button.
 function first_call_button_Callback(hObject, eventdata, handles)
-handles.current_voc = 1;
+handles.internal.current_voc = 1;
 update(handles);
 guidata(hObject, handles);
 
 % --- Executes on button press in final_call_button.
 function final_call_button_Callback(hObject, eventdata, handles)
-handles.current_voc = length(handles.DataArray);
+handles.internal.current_voc = length(handles.internal.DataArray);
 update(handles);
 guidata(hObject, handles);
 
 function voc_edit_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of voc_edit as text
 %        str2double(get(hObject,'String')) returns contents of voc_edit as a double
-handles.current_voc = str2double(get(hObject,'string'));
-if handles.current_voc > length(handles.DataArray)
-  handles.current_voc = length(handles.DataArray);
-elseif handles.current_voc < 1
-  handles.current_voc = 1;
+handles.internal.current_voc = str2double(get(hObject,'string'));
+if handles.internal.current_voc > length(handles.internal.DataArray)
+  handles.internal.current_voc = length(handles.internal.DataArray);
+elseif handles.internal.current_voc < 1
+  handles.internal.current_voc = 1;
 end
 update(handles);
 guidata(hObject, handles);
 
 % --- Executes on button press in delete_button.
 function delete_button_Callback(hObject, eventdata, handles)
-handles.DataArray(handles.current_voc)=[];
-if handles.current_voc > length(handles.DataArray)
-  handles.current_voc=length(handles.DataArray);
+handles.internal.DataArray(handles.internal.current_voc)=[];
+if handles.internal.current_voc > length(handles.internal.DataArray)
+  handles.internal.current_voc=length(handles.internal.DataArray);
 end
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 
 % --- Executes on button press in new_button.
 function new_button_Callback(hObject, eventdata, handles)
 axes(handles.wave_axes);
 [x,y] = ginput(1);
-handles.DataArray(end+1)=x;
-handles.DataArray = sort(handles.DataArray);
-update(handles);
+handles.internal.DataArray(end+1)=x;
+handles.internal.DataArray = sort(handles.internal.DataArray);
 guidata(hObject, handles);
+update(handles);
 
 
 function voc_edit_CreateFcn(hObject, eventdata, handles)
@@ -379,14 +397,15 @@ function file_menu_Callback(hObject, eventdata, handles)
 
 % --------------------------------------------------------------------
 function open_menu_Callback(hObject, eventdata, handles)
+handles=initialize(handles);
 handles=load_audio(handles);
 guidata(hObject, handles);
 
 % --------------------------------------------------------------------
 function save_menu_Callback(hObject, eventdata, handles)
-if isfield(handles,'marked_voc_pname') && ...
-    exist(handles.marked_voc_pname,'dir')
-  DEFAULTNAME=handles.marked_voc_pname;
+if isfield(handles.internal,'marked_voc_pname') && ...
+    exist(handles.internal.marked_voc_pname,'dir')
+  DEFAULTNAME=handles.internal.marked_voc_pname;
 elseif ispref('audioanalysischecker','marked_voc_pname')
   DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
 else
@@ -404,13 +423,41 @@ end
 load([DEFAULTNAME 'sound_data.mat']);
 setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
 
-indx=handles.sound_data_indx;
+indx=handles.internal.sound_data_indx;
 vicon_trigger_offset = (8*300 - length(extracted_sound_data(indx).centroid) + 1)/300;
-extracted_sound_data(indx).voc_t=handles.DataArray - vicon_trigger_offset;
-extracted_sound_data(indx).voc_checked=1;
 
-save([DEFAULTNAME 'sound_data.mat'],'extracted_sound_data');
-disp(['Saved at ' datestr(now,'HH:MM PM')]);
+
+if strcmp(extracted_sound_data(indx).trialcode,determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]))
+  extracted_sound_data(indx).voc_t=handles.internal.DataArray - vicon_trigger_offset;
+  extracted_sound_data(indx).voc_checked=1;
+  extracted_sound_data(indx).voc_checked_time=datevec(now);
+
+  save([DEFAULTNAME 'sound_data.mat'],'extracted_sound_data');
+  disp(['Saved ' handles.internal.audio_fname ' at ' datestr(now,'HH:MM PM')]);
+else
+  disp('Error in saving');
+end
 
 % --------------------------------------------------------------------
 function close_menu_Callback(hObject, eventdata, handles)
+delete(handles.figure1);
+
+function plot_spectrogram_checkbox_Callback(hObject, eventdata, handles)
+update(handles);
+
+
+function previous_10_button_Callback(hObject, eventdata, handles)
+handles.internal.current_voc = handles.internal.current_voc - 10;
+if handles.internal.current_voc < 1
+  handles.internal.current_voc = 1;
+end
+update(handles);
+guidata(hObject, handles);
+
+function next_10_button_Callback(hObject, eventdata, handles)
+handles.internal.current_voc = handles.internal.current_voc + 10;
+if handles.internal.current_voc > length(handles.internal.DataArray)
+  handles.internal.current_voc = length(handles.internal.DataArray);
+end
+update(handles);
+guidata(hObject, handles);
