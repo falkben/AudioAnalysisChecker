@@ -3,9 +3,9 @@ function trialcode = determine_vicon_trialcode(fname)
 
 slashes = strfind(fname,'\');
 
-bat = fname(slashes(3)+1:slashes(4)-1);
-date = datevec(fname(slashes(4)+1:end-7),'dd-mmm-yyyy');
-num=fname(slashes(4)+13:end-4);
+bat = fname(slashes(end-1)+1:slashes(end)-1);
+date = datevec(fname(slashes(end)+1:end-7),'dd-mmm-yyyy');
+num=fname(slashes(end)+13:end-4);
 
 load([getpref('audioanalysischecker','marked_voc_pname') 'data_sheet.mat']);
 

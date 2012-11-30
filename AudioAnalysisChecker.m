@@ -86,6 +86,7 @@ end
 if isequal(filename,0)
   return
 end
+setpref('audioanalysischecker','audio_pname',pathname);
 
 handles.internal.audio_pname=pathname;
 handles.internal.audio_fname=filename;
@@ -165,9 +166,9 @@ if isempty(indx)
   return;
 end
 handles.internal.sound_data_indx = indx;
-vicon_trigger_offset = (8*300 - length(extracted_sound_data(indx).centroid) + 1)/300;
-handles.internal.net_crossings = extracted_sound_data(indx).net_crossings./300 - 8 + vicon_trigger_offset;
-handles.internal.DataArray = extracted_sound_data(indx).voc_t + vicon_trigger_offset;
+
+handles.internal.net_crossings = extracted_sound_data(indx).net_crossings./300 - 8;
+handles.internal.DataArray = extracted_sound_data(indx).voc_t;
 
 
 
@@ -424,11 +425,9 @@ load([DEFAULTNAME 'sound_data.mat']);
 setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
 
 indx=handles.internal.sound_data_indx;
-vicon_trigger_offset = (8*300 - length(extracted_sound_data(indx).centroid) + 1)/300;
-
 
 if strcmp(extracted_sound_data(indx).trialcode,determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]))
-  extracted_sound_data(indx).voc_t=handles.internal.DataArray - vicon_trigger_offset;
+  extracted_sound_data(indx).voc_t=handles.internal.DataArray;
   extracted_sound_data(indx).voc_checked=1;
   extracted_sound_data(indx).voc_checked_time=datevec(now);
 
