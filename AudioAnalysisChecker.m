@@ -136,40 +136,46 @@ update(handles);
 
 
 function handles = load_marked_vocs(handles)
-if isfield(handles.internal,'marked_voc_pname') && ...
-    exist(handles.internal.marked_voc_pname,'dir')
-  DEFAULTNAME=handles.internal.marked_voc_pname;
-elseif ispref('audioanalysischecker','marked_voc_pname')
-  DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
+fn = gen_processed_fname(handles);
+if exist(fn,'file')
+  load(fn);
+  handles.internal.net_crossings = (trial_data.net_crossings-length(trial_data.centroid))/300;
+  handles.internal.DataArray = trial_data.voc_t;
+  handles.internal.extracted_sound_data = trial_data;
 else
-  DEFAULTNAME='';
-end
-
-if ~exist([DEFAULTNAME 'sound_data.mat'],'file')
-  [~, DEFAULTNAME] = uigetfile('sound_data.mat',...
-    'Select processed sound data (sound_data.mat)',DEFAULTNAME);
-  if isequal(DEFAULTNAME,0)
-    return
+  if ispref('audioanalysischecker','marked_voc_pname')
+    DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
+  else
+    DEFAULTNAME='';
   end
+
+  if ~exist([DEFAULTNAME 'sound_data.mat'],'file')
+    [~, DEFAULTNAME] = uigetfile('sound_data.mat',...
+      'Select processed sound data (sound_data.mat)',DEFAULTNAME);
+    if isequal(DEFAULTNAME,0)
+      return
+    end
+  end
+
+  load([DEFAULTNAME 'sound_data.mat']);
+  setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
+
+  all_trialcodes={extracted_sound_data.trialcode};
+  trialcode = determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]);
+  indx=find(strcmp(all_trialcodes,trialcode));
+
+  if isempty(indx)
+    handles.internal.DataArray=[];
+    disp('Vicon trial absent.')
+    return;
+  end
+
+  handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
+  handles.internal.DataArray = extracted_sound_data(indx).voc_t;
+  handles.internal.extracted_sound_data = extracted_sound_data(indx);
 end
 
-load([DEFAULTNAME 'sound_data.mat']);
-setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
 
-all_trialcodes={extracted_sound_data.trialcode};
-trialcode = determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]);
-indx=find(strcmp(all_trialcodes,trialcode));
-
-if isempty(indx)
-  handles.internal.DataArray=[];
-  handles.internal.sound_data_indx=[];
-  disp('Vicon trial absent.')
-  return;
-end
-handles.internal.sound_data_indx = indx;
-
-handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
-handles.internal.DataArray = extracted_sound_data(indx).voc_t;
 
 
 
@@ -245,6 +251,10 @@ if get(handles.plot_spectrogram_checkbox,'value')
   end
   colormap('hot')
 end
+
+function fn = gen_processed_fname(handles)
+sound_file=[handles.internal.audio_pname handles.internal.audio_fname];
+fn=[sound_file(1:end-4) '_processed.mat'];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -405,38 +415,14 @@ guidata(hObject, handles);
 
 % --------------------------------------------------------------------
 function save_menu_Callback(hObject, eventdata, handles)
-if isfield(handles.internal,'marked_voc_pname') && ...
-    exist(handles.internal.marked_voc_pname,'dir')
-  DEFAULTNAME=handles.internal.marked_voc_pname;
-elseif ispref('audioanalysischecker','marked_voc_pname')
-  DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
-else
-  DEFAULTNAME='';
-end
+trial_data=handles.internal.extracted_sound_data;
+trial_data.voc_t=handles.internal.DataArray;
+trial_data.voc_checked=1;
+trial_data.voc_checked_time=datevec(now);
 
-if ~exist([DEFAULTNAME 'sound_data.mat'],'file')
-  [~, DEFAULTNAME] = uigetfile('sound_data.mat',...
-    'Select processed sound data (sound_data.mat)',DEFAULTNAME);
-  if isequal(DEFAULTNAME,0)
-    return
-  end
-end
-
-load([DEFAULTNAME 'sound_data.mat']);
-setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
-
-indx=handles.internal.sound_data_indx;
-
-if strcmp(extracted_sound_data(indx).trialcode,determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]))
-  extracted_sound_data(indx).voc_t=handles.internal.DataArray;
-  extracted_sound_data(indx).voc_checked=1;
-  extracted_sound_data(indx).voc_checked_time=datevec(now);
-
-  save([DEFAULTNAME 'sound_data.mat'],'extracted_sound_data');
-  disp(['Saved ' handles.internal.audio_fname ' at ' datestr(now,'HH:MM PM')]);
-else
-  disp('Error in saving');
-end
+fn=gen_processed_fname(handles);
+save(fn,'trial_data');
+disp(['Saved ' handles.internal.audio_fname ' at ' datestr(now,'HH:MM PM')]);
 
 % --------------------------------------------------------------------
 function close_menu_Callback(hObject, eventdata, handles)
