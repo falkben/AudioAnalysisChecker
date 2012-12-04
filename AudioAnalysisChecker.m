@@ -110,19 +110,20 @@ elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
   Fs = h.preFreq;
 end
 
-figure(1); clf;
-for k=1:size(waveforms,2)
-  subplot(size(waveforms,2),1,k)
-  plot(waveforms(1:10:end,k));
-  title(['Channel: ' num2str(k)]);
-end
-options.WindowStyle='normal';
-channel = inputdlg('Which channel?','',1,{''},options);
-close(1);
-
-if isempty(channel)
-  return;
-end
+% figure(1); clf;
+% for k=1:size(waveforms,2)
+%   subplot(size(waveforms,2),1,k)
+%   plot(waveforms(1:10:end,k));
+%   title(['Channel: ' num2str(k)]);
+% end
+% options.WindowStyle='normal';
+% channel = inputdlg('Which channel?','',1,{''},options);
+% close(1);
+% 
+% if isempty(channel)
+%   return;
+% end
+channel='1'; %speed up loading audio for 2012 data
 
 handles.internal.waveform=waveforms(:,str2double(channel));
 handles.internal.Fs=Fs;
