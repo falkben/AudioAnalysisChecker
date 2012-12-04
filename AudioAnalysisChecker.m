@@ -167,7 +167,7 @@ if isempty(indx)
 end
 handles.internal.sound_data_indx = indx;
 
-handles.internal.net_crossings = extracted_sound_data(indx).net_crossings./300 - 8;
+handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
 handles.internal.DataArray = extracted_sound_data(indx).voc_t;
 
 
