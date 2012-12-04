@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 29-Nov-2012 15:19:48
+% Last Modified by GUIDE v2.5 04-Dec-2012 16:52:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -58,11 +58,12 @@ varargout{1} = handles.output;
 
 
 function handles = initialize(handles)
-set(handles.lock_range_checkbox,'Value',0);
+% set(handles.lock_range_checkbox,'Value',0);
 handles.samples=round(str2double(get(handles.sample_edit,'string')));
 axes(handles.wave_axes);cla;
 axes(handles.spect_axes);cla;
 handles.internal = [];
+set(handles.processed_checkbox,'value',0);
 
 
 function handles=load_audio(handles)
@@ -142,6 +143,7 @@ if exist(fn,'file')
   handles.internal.net_crossings = (trial_data.net_crossings-length(trial_data.centroid))/300;
   handles.internal.DataArray = trial_data.voc_t;
   handles.internal.extracted_sound_data = trial_data;
+  set(handles.processed_checkbox,'value',1);
 else
   if ispref('audioanalysischecker','marked_voc_pname')
     DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
@@ -363,6 +365,7 @@ end
 function low_dB_edit_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of low_dB_edit as text
 %        str2double(get(hObject,'String')) returns contents of low_dB_edit as a double
+set(handles.lock_range_checkbox,'value',1);
 update(handles);
 guidata(hObject, handles);
 
@@ -385,6 +388,7 @@ guidata(hObject,handles);
 function top_dB_edit_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of top_dB_edit as text
 %        str2double(get(hObject,'String')) returns contents of top_dB_edit as a double
+set(handles.lock_range_checkbox,'value',1);
 update(handles);
 guidata(hObject, handles);
 
@@ -398,9 +402,20 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on mouse press over axes background.
-function wave_axes_ButtonDownFcn(hObject, eventdata, handles)
-disp('button_pressed')
+function key_press_handler(hObject, eventdata, handles)
+key=get(handles.figure1,'CurrentKey');
+
+switch key
+  case {'numpad6','rightarrow'}
+    next_button_Callback(handles.next_button, eventdata, handles);
+  case {'numpad4','leftarrow'}
+    prev_button_Callback(handles.prev_button, eventdata, handles);
+  case {'period','decimal'}
+    new_button_Callback(handles.new_button, eventdata, handles);
+  case {'subtract','hyphen'}
+    delete_button_Callback(handles.delete_button, eventdata, handles);
+end
+
 
 
 % --------------------------------------------------------------------
@@ -447,3 +462,19 @@ if handles.internal.current_voc > length(handles.internal.DataArray)
 end
 update(handles);
 guidata(hObject, handles);
+
+
+function playbutton_Callback(hObject, eventdata, handles)
+
+voc_time = handles.internal.DataArray(handles.internal.current_voc);
+
+voc_sample = round((voc_time + 8)*handles.internal.Fs);
+
+buffer=handles.samples/2;
+sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.internal.waveform));
+X=handles.internal.waveform(sample_range);
+
+sound(X,handles.internal.Fs/20);
+
+
+function processed_checkbox_Callback(hObject, eventdata, handles)
