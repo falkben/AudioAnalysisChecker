@@ -193,7 +193,7 @@ voc_time = handles.internal.DataArray(handles.internal.current_voc);
 
 voc_sample = round((voc_time + 8)*Fs);
 
-buffer=handles.samples/2;
+buffer=round(handles.samples/2);
 sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.internal.waveform));
 X=handles.internal.waveform(sample_range);
 
@@ -233,7 +233,7 @@ hold off;
 %plotting spectrogram:
 axes(handles.spect_axes);cla;
 if get(handles.plot_spectrogram_checkbox,'value')
-  [S,F,T,P] = spectrogram(X,256,250,512,Fs,'yaxis');
+  [S,F,T,P] = spectrogram(X,256,230,[],Fs,'yaxis');
   imagesc(T,F,10*log10(abs(P))); axis tight;
   set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
     num2str((0:25:125)'),'xticklabel','');
