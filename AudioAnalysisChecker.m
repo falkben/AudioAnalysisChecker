@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 04-Dec-2012 16:52:17
+% Last Modified by GUIDE v2.5 07-Dec-2012 13:20:57
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -58,10 +58,10 @@ varargout{1} = handles.output;
 
 
 function handles = initialize(handles)
-% set(handles.lock_range_checkbox,'Value',0);
 handles.samples=round(str2double(get(handles.sample_edit,'string')));
 axes(handles.wave_axes);cla;
 axes(handles.spect_axes);cla;
+axes(handles.PI_axes);cla;
 handles.internal = [];
 set(handles.processed_checkbox,'value',0);
 
@@ -168,7 +168,9 @@ else
 
   if isempty(indx)
     handles.internal.DataArray=[];
-    disp('Vicon trial absent.')
+    display_text = ['Vicon trial: ' trialcode ' absent.'];
+    disp(display_text)
+    add_text(handles,display_text);
     return;
   end
 
@@ -178,7 +180,10 @@ else
 end
 
 
-
+function add_text(handles,text)
+current_text = get(handles.text_output_listbox,'String');
+new_text = [current_text; {text}];
+set(handles.text_output_listbox,'String',new_text);
 
 
 
@@ -253,6 +258,34 @@ if get(handles.plot_spectrogram_checkbox,'value')
   end
   colormap('hot')
 end
+
+%plotting PI:
+axes(handles.PI_axes);cla;
+if get(handles.plot_PI_checkbox,'value')
+  plot_PI(handles);
+end
+
+
+function plot_PI(handles)
+PI=diff(handles.internal.DataArray)*1e3;
+t=handles.internal.DataArray(2:end);
+
+plot(t,PI,'.-k');
+axis tight;
+a=axis;
+axis([a(1:2) 0 a(4)]);
+hold on;
+if handles.internal.current_voc > 1
+  plot(t(handles.internal.current_voc-1),PI(handles.internal.current_voc-1),...
+    'o','linewidth',2,'color',[.6 .6 1]);
+end
+for k=1:length(handles.internal.net_crossings)
+  plot(handles.internal.net_crossings(k)*ones(2,1),[0 a(4)],...
+    'b','linewidth',2);
+end
+hold off;
+title('Pulse Interval (ms)','fontsize',8)
+
 
 function fn = gen_processed_fname(handles)
 sound_file=[handles.internal.audio_pname handles.internal.audio_fname];
@@ -347,10 +380,17 @@ update(handles);
 function new_button_Callback(hObject, eventdata, handles)
 axes(handles.wave_axes);
 [x,y] = ginput(1);
-handles.internal.DataArray(end+1)=x;
-handles.internal.DataArray = sort(handles.internal.DataArray);
-guidata(hObject, handles);
-update(handles);
+voc_time = handles.internal.DataArray(handles.internal.current_voc);
+buffer=handles.samples/2/handles.internal.Fs;
+if x > voc_time - buffer && x < voc_time + buffer
+  handles.internal.DataArray(end+1)=x;
+  handles.internal.DataArray = sort(handles.internal.DataArray);
+  guidata(hObject, handles);
+  update(handles);
+else
+  disp('Outside displayed range');
+  add_text(handles,'Outside displayed range');
+end
 
 
 function voc_edit_CreateFcn(hObject, eventdata, handles)
@@ -437,7 +477,9 @@ trial_data.voc_checked_time=datevec(now);
 
 fn=gen_processed_fname(handles);
 save(fn,'trial_data');
-disp(['Saved ' handles.internal.audio_fname ' at ' datestr(now,'HH:MM PM')]);
+display_text = ['Saved ' handles.internal.audio_fname ' at ' datestr(now,'HH:MM PM')];
+disp(display_text);
+add_text(handles,display_text);
 
 % --------------------------------------------------------------------
 function close_menu_Callback(hObject, eventdata, handles)
@@ -446,6 +488,9 @@ delete(handles.figure1);
 function plot_spectrogram_checkbox_Callback(hObject, eventdata, handles)
 update(handles);
 
+
+function plot_PI_checkbox_Callback(hObject, eventdata, handles)
+update(handles);
 
 function previous_10_button_Callback(hObject, eventdata, handles)
 handles.internal.current_voc = handles.internal.current_voc - 10;
@@ -478,3 +523,9 @@ sound(X,handles.internal.Fs/20);
 
 
 function processed_checkbox_Callback(hObject, eventdata, handles)
+
+function new_window_PI_button_Callback(hObject, eventdata, handles)
+figure(1); clf;
+plot_PI(handles)
+
+function text_output_listbox_CreateFcn(hObject, eventdata, handles)
