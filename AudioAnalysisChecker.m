@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 07-Dec-2012 13:20:57
+% Last Modified by GUIDE v2.5 10-Dec-2012 17:00:25
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -177,6 +177,7 @@ else
   handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
   handles.internal.DataArray = extracted_sound_data(indx).voc_t;
   handles.internal.extracted_sound_data = extracted_sound_data(indx);
+  handles.internal.changed=0;
 end
 
 
@@ -291,6 +292,42 @@ function fn = gen_processed_fname(handles)
 sound_file=[handles.internal.audio_pname handles.internal.audio_fname];
 fn=[sound_file(1:end-4) '_processed.mat'];
 
+function save_trial(handles)
+trial_data=handles.internal.extracted_sound_data;
+trial_data.voc_t=handles.internal.DataArray;
+trial_data.voc_checked=1;
+trial_data.voc_checked_time=datevec(now);
+
+fn=gen_processed_fname(handles);
+save(fn,'trial_data');
+handles.internal.changed = 0;
+display_text = ['Saved ' handles.internal.audio_fname ' at ' datestr(now,'HH:MM PM')];
+disp(display_text);
+add_text(handles,display_text);
+guidata(handles.save_menu,handles);
+
+
+function canceled = save_before_discard(handles)
+canceled = 0;
+if isfield(handles.internal,'changed') && handles.internal.changed
+  choice = questdlg('Edits detected, save first?', ...
+    'Save?', ...
+    'Yes','No','Cancel','Yes');
+  % Handle response
+  switch choice
+    case 'Yes'
+      save_trial(handles);
+    case 'Cancel'
+      canceled = 1;
+  end
+end
+
+function close_GUI(handles)
+if save_before_discard(handles)
+  return
+end
+delete(handles.figure1);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -369,6 +406,7 @@ guidata(hObject, handles);
 % --- Executes on button press in delete_button.
 function delete_button_Callback(hObject, eventdata, handles)
 handles.internal.DataArray(handles.internal.current_voc)=[];
+handles.internal.changed=1;
 if handles.internal.current_voc > length(handles.internal.DataArray)
   handles.internal.current_voc=length(handles.internal.DataArray);
 end
@@ -385,6 +423,7 @@ buffer=handles.samples/2/handles.internal.Fs;
 if x > voc_time - buffer && x < voc_time + buffer
   handles.internal.DataArray(end+1)=x;
   handles.internal.DataArray = sort(handles.internal.DataArray);
+  handles.internal.changed=1;
   guidata(hObject, handles);
   update(handles);
 else
@@ -464,26 +503,20 @@ function file_menu_Callback(hObject, eventdata, handles)
 
 % --------------------------------------------------------------------
 function open_menu_Callback(hObject, eventdata, handles)
+if save_before_discard(handles)
+  return
+end
 handles=initialize(handles);
 handles=load_audio(handles);
 guidata(hObject, handles);
 
 % --------------------------------------------------------------------
 function save_menu_Callback(hObject, eventdata, handles)
-trial_data=handles.internal.extracted_sound_data;
-trial_data.voc_t=handles.internal.DataArray;
-trial_data.voc_checked=1;
-trial_data.voc_checked_time=datevec(now);
-
-fn=gen_processed_fname(handles);
-save(fn,'trial_data');
-display_text = ['Saved ' handles.internal.audio_fname ' at ' datestr(now,'HH:MM PM')];
-disp(display_text);
-add_text(handles,display_text);
+save_trial(handles);
 
 % --------------------------------------------------------------------
 function close_menu_Callback(hObject, eventdata, handles)
-delete(handles.figure1);
+close_GUI(handles)
 
 function plot_spectrogram_checkbox_Callback(hObject, eventdata, handles)
 update(handles);
@@ -529,3 +562,8 @@ figure(1); clf;
 plot_PI(handles)
 
 function text_output_listbox_CreateFcn(hObject, eventdata, handles)
+
+
+% --- Executes when user attempts to close figure1.
+function figure1_CloseRequestFcn(hObject, eventdata, handles)
+close_GUI(handles);
