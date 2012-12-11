@@ -159,7 +159,22 @@ else
     end
   end
 
-  load([DEFAULTNAME 'sound_data.mat']);
+  handles.sound_data_file = [DEFAULTNAME 'sound_data.mat'];
+  %compare checksum to checksum in handles if it exists
+  %saves time loading sound_data.mat every time
+  [status result] = system(['md5\md5.exe ' handles.sound_data_file]);
+  if status == 0
+    space_indx=strfind(result,' ');
+    checksum = result(1:space_indx(1));
+  end
+  if isfield(handles,'sound_data') && strcmp(checksum,handles.sound_data_checksum)
+    extracted_sound_data = handles.sound_data;
+  else
+    load(handles.sound_data_file);
+    handles.sound_data = extracted_sound_data;
+    handles.sound_data_checksum = checksum;
+  end
+  
   setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
 
   all_trialcodes={extracted_sound_data.trialcode};
