@@ -12,7 +12,7 @@ load([getpref('audioanalysischecker','marked_voc_pname') 'data_sheet.mat']);
 bat_indx=~cellfun(@isempty,strfind(data_sheet(:,2),bat));
 date_indx=~cellfun(@isempty,strfind(data_sheet(:,1),...
   [num2str(date(2)) '/' num2str(date(3)) '/' num2str(date(1))]));
-num_indx=cellfun(@ (c) isequal(str2double(num),c),data_sheet(:,4));
+num_indx=cellfun(@ (c) isequal(str2double(num),c),data_sheet(:,3));
 
 indx=bat_indx&date_indx&num_indx;
 if ~isempty(find(indx,1))
