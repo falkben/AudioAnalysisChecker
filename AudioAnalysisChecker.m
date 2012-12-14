@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 14-Dec-2012 12:26:21
+% Last Modified by GUIDE v2.5 14-Dec-2012 12:48:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -570,7 +570,9 @@ buffer=handles.samples/2;
 sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.internal.waveform));
 X=handles.internal.waveform(sample_range);
 
-sound(X,handles.internal.Fs/20);
+slowdown_factor = str2double(get(handles.playback_slowdown_factor,'string'));
+
+soundsc(X,handles.internal.Fs/slowdown_factor);
 
 
 function processed_checkbox_Callback(hObject, eventdata, handles)
@@ -589,3 +591,27 @@ close_GUI(handles);
 
 
 function text_output_listbox_Callback(hObject, eventdata, handles)
+
+  
+
+
+function playback_slowdown_factor_Callback(hObject, eventdata, handles)
+set_value = str2double(get(hObject,'String'));
+if ~audiodevinfo(0, 2, handles.internal.Fs/set_value, 16, 1)
+  set(hObject,'String','20');
+  disp_text='Sample rate not supported';
+  add_text(handles,disp_text);
+  disp(disp_text);
+end
+
+% --- Executes during object creation, after setting all properties.
+function playback_slowdown_factor_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to playback_slowdown_factor (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
