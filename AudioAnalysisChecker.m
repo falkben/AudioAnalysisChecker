@@ -247,11 +247,24 @@ hold off;
 text(disp_voc_times,zeros(length(disp_voc_times),1),...
   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
 
-%displaying net crossings
+%displaying net crossings if visible
 hold on;
 net_crossings = handles.internal.net_crossings;
-plot([net_crossings(1) net_crossings(1)],[-5 5],'b','linewidth',2);
-plot([net_crossings(2) net_crossings(2)],[-5 5],'b','linewidth',2);
+
+if a(1)<net_crossings(1)
+  plot([net_crossings(1) net_crossings(1)],[-5 5],'b','linewidth',2);
+end
+if a(2)>net_crossings(2)
+  plot([net_crossings(2) net_crossings(2)],[-5 5],'b','linewidth',2);
+end
+
+%plotting start and stop of the processed file if visible
+if a(1)<net_crossings(1)-.5
+  plot((net_crossings(1)-.5)*ones(2,1),[-5 5],'m','linewidth',2);
+end
+if a(2)>net_crossings(2)+1
+  plot((net_crossings(2)+1)*ones(2,1),[-5 5],'g','linewidth',2);
+end
 hold off;
 
 %plotting spectrogram:
@@ -302,7 +315,9 @@ for k=1:length(handles.internal.net_crossings)
   plot(handles.internal.net_crossings(k)*ones(2,1),[0 a(4)],...
     'b','linewidth',2);
 end
-hold off;
+plot((handles.internal.net_crossings(1)-.5)*ones(2,1),[0 a(4)],'m','linewidth',2);
+plot((handles.internal.net_crossings(2)+1)*ones(2,1),[0 a(4)],'g','linewidth',2);
+hold off; axis tight;
 title('Pulse Interval (ms)','fontsize',8)
 
 
