@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 10-Dec-2012 17:00:25
+% Last Modified by GUIDE v2.5 14-Dec-2012 12:26:21
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -200,7 +200,10 @@ function add_text(handles,text)
 current_text = get(handles.text_output_listbox,'String');
 new_text = [current_text; {text}];
 set(handles.text_output_listbox,'String',new_text);
-
+addpath('findjobj');
+jhEdit = findjobj(handles.text_output_listbox);
+jEdit = jhEdit.getComponent(0).getComponent(0);
+jEdit.setCaretPosition(jEdit.getDocument.getLength);
 
 
 function update(handles)
@@ -582,3 +585,7 @@ function text_output_listbox_CreateFcn(hObject, eventdata, handles)
 % --- Executes when user attempts to close figure1.
 function figure1_CloseRequestFcn(hObject, eventdata, handles)
 close_GUI(handles);
+
+
+
+function text_output_listbox_Callback(hObject, eventdata, handles)
