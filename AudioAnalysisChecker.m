@@ -612,7 +612,11 @@ function text_output_listbox_Callback(hObject, eventdata, handles)
 
 function playback_slowdown_factor_Callback(hObject, eventdata, handles)
 set_value = str2double(get(hObject,'String'));
-if ~audiodevinfo(0, 2, handles.internal.Fs/set_value, 16, 1)
+devinfo=audiodevinfo;
+inputs = audiodevinfo(1);
+names={devinfo.output.Name};
+indx=find(~cellfun(@isempty,strfind(names,'Primary Sound Driver'))) + inputs;
+if ~audiodevinfo(0, indx, handles.internal.Fs/set_value, 16, 1)
   set(hObject,'String','20');
   disp_text='Sample rate not supported';
   add_text(handles,disp_text);
