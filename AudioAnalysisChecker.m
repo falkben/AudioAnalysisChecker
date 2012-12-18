@@ -343,6 +343,7 @@ guidata(handles.save_menu,handles);
 function canceled = save_before_discard(handles)
 canceled = 0;
 if isfield(handles.internal,'changed') && handles.internal.changed
+  f=gcf;
   choice = questdlg('Edits detected, save first?', ...
     'Save?', ...
     'Yes','No','Cancel','Yes');
@@ -353,6 +354,7 @@ if isfield(handles.internal,'changed') && handles.internal.changed
     case 'Cancel'
       canceled = 1;
   end
+  figure(f);
 end
 
 function close_GUI(handles)
