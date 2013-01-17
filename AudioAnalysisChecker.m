@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 14-Dec-2012 12:48:27
+% Last Modified by GUIDE v2.5 17-Jan-2013 11:58:18
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -64,28 +64,32 @@ axes(handles.spect_axes);cla;
 axes(handles.PI_axes);cla;
 handles.internal = [];
 set(handles.processed_checkbox,'value',0);
+set(handles.save_menu,'enable','off');
+set(handles.save_open_next,'enable','off');
 
 
-function handles=load_audio(handles)
-if isfield(handles.internal,'audio_pname') && ...
-    exist(handles.internal.audio_pname,'dir')
-  pathname=handles.internal.audio_pname;
-elseif ispref('audioanalysischecker','audio_pname')
-  pathname=getpref('audioanalysischecker','audio_pname');
-else
-  STARTDIR='';
-  pathname = uigetdir(STARTDIR,...
-    'Select folder where raw audio files are located');
-  if isequal(pathname,0)
+function handles=load_audio(handles,pathname,filename)
+if nargin == 1
+  if isfield(handles.internal,'audio_pname') && ...
+      exist(handles.internal.audio_pname,'dir')
+    pathname=handles.internal.audio_pname;
+  elseif ispref('audioanalysischecker','audio_pname')
+    pathname=getpref('audioanalysischecker','audio_pname');
+  else
+    STARTDIR='';
+    pathname = uigetdir(STARTDIR,...
+      'Select folder where raw audio files are located');
+    if isequal(pathname,0)
+      return
+    end
+    setpref('audioanalysischecker','audio_pname',pathname);
+  end
+
+  [filename pathname]=uigetfile({'*.mat;*.bin'},...
+    'Load audio file',[pathname '\']);
+  if isequal(filename,0)
     return
   end
-  setpref('audioanalysischecker','audio_pname',pathname);
-end
-
-[filename pathname]=uigetfile({'*.mat;*.bin'},...
-  'Load audio file',[pathname '\']);
-if isequal(filename,0)
-  return
 end
 setpref('audioanalysischecker','audio_pname',pathname);
 
@@ -130,9 +134,13 @@ handles.internal.waveform=waveforms(:,str2double(channel));
 handles.internal.Fs=Fs;
 
 handles.internal.current_voc=1;
+display_text = ['Opened file: ' handles.internal.audio_fname];
+disp(display_text)
+add_text(handles,display_text);
 
 set(gcf,'Name',['AudioAnalysisChecker: ' handles.internal.audio_fname]);
-
+set(handles.save_open_next,'enable','on');
+set(handles.save_menu,'enable','on');
 update(handles);
 
 
@@ -144,6 +152,9 @@ if exist(fn,'file')
   handles.internal.DataArray = trial_data.voc_t;
   handles.internal.extracted_sound_data = trial_data;
   set(handles.processed_checkbox,'value',1);
+  display_text = 'Processed file found';
+  disp(display_text)
+  add_text(handles,display_text);
 else
   if ispref('audioanalysischecker','marked_voc_pname')
     DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
@@ -548,6 +559,40 @@ guidata(hObject, handles);
 % --------------------------------------------------------------------
 function save_menu_Callback(hObject, eventdata, handles)
 save_trial(handles);
+
+% --------------------------------------------------------------------
+function save_open_next_Callback(hObject, eventdata, handles)
+save_trial(handles);
+
+fname=handles.internal.audio_fname;
+pname=handles.internal.audio_pname;
+
+all_files=dir([pname '*.mat']);
+processed_files=dir([pname '*processed.mat']);
+fnames_unsort=setdiff({all_files.name},{processed_files.name});
+
+fname_dates = cellfun(@(f) datenum(f(1:11),'dd-mmm-yyyy'),fnames_unsort);
+[~, ia] = sort(fname_dates);
+fname_tcodes = cellfun(@(f) str2double(f(13:14)),fnames_unsort);
+[~, ib] = sort(fname_tcodes);
+ia_order = 1:length(ia);
+A=[ia_order', ia_order(ib)'];
+[~, index]=sortrows(A,[1 2]);
+fnames = fnames_unsort(ia(index))';
+
+handles=initialize(handles);
+
+i=find(~cellfun(@isempty,strfind(fnames,fname)),1);
+while ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArray)
+  i=i+1;
+  if i <= length(fnames)
+    handles=load_audio(handles,pname,fnames{i});
+  else
+    disp('Reached end');
+  end
+end
+
+guidata(hObject, handles);
 
 % --------------------------------------------------------------------
 function close_menu_Callback(hObject, eventdata, handles)
