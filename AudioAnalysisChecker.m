@@ -589,6 +589,7 @@ while ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArr
     handles=load_audio(handles,pname,fnames{i});
   else
     disp('Reached end');
+    break
   end
 end
 
