@@ -336,9 +336,51 @@ function fn = gen_processed_fname(handles)
 sound_file=[handles.internal.audio_pname handles.internal.audio_fname];
 fn=[sound_file(1:end-4) '_processed.mat'];
 
+function static = load_static()
+static = [];
+if ispref('audio_analysis_checker','static_trials')
+  fullpath = getpref('audio_analysis_checker','static_trials');
+else
+  [file path] = uigetfile({'*.mat;'},'Load static file');
+  if isequal(file,0)
+    display_text = 'No static file chosen, exiting';
+    disp(display_text);
+    add_text(handles,display_text);
+    return;
+  end
+  fullpath = [path file];
+  setpref('audio_analysis_checker','static_trials',[path file]);
+end
+load(fullpath);
+
+function mic = get_microphone_position(static,handles)
+trialcode = handles.internal.extracted_sound_data.trialcode;
+dots = strfind(trialcode,'.');
+static_day = static(~cellfun(@(c) isempty(c),...
+  strfind({static.date},trialcode(dots(1)+1:dots(2)-1))));
+mic_indx = ~cellfun(@isempty,...
+  strfind({static_day.markers.name},'MealwormMicrophone'));
+mic = static_day.markers(mic_indx).point;
+
 function save_trial(handles)
 trial_data=handles.internal.extracted_sound_data;
 trial_data.voc_t=handles.internal.DataArray;
+
+%calculating emission times
+static = load_static();
+if isempty(static)
+  display_text = 'Couldn''t load static trial for determining emission time, trial not saved';
+  disp(display_text);
+  add_text(handles,display_text);
+  return;
+end
+mic = get_microphone_position(static,handles);
+NC=trial_data.net_crossings;
+frames=max(1,NC(1)-300):min(NC(2)+500,length(trial_data.sm_centroid));
+D=distance(trial_data.sm_centroid(frames,:),mic);
+t=frames/300-length(trial_data.centroid)/300;
+trial_data.emission_times = calc_emission_times(D,t,trial_data.voc_t);
+
 trial_data.voc_checked=1;
 trial_data.voc_checked_time=datevec(now);
 
