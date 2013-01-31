@@ -379,7 +379,7 @@ NC=trial_data.net_crossings;
 frames=max(1,NC(1)-300):min(NC(2)+500,length(trial_data.sm_centroid));
 D=distance(trial_data.sm_centroid(frames,:),mic);
 t=frames/300-length(trial_data.centroid)/300;
-trial_data.emission_times = calc_emission_times(D,t,trial_data.voc_t);
+trial_data.emission_t = calc_emission_times(D,t,trial_data.voc_t);
 
 trial_data.voc_checked=1;
 trial_data.voc_checked_time=datevec(now);
