@@ -244,7 +244,12 @@ if strcmp(selected_wave_axes,'Waveform')
   axis([a(1:2) -10 10]);
 elseif strcmp(selected_wave_axes,'Smoothed, rectified')
   %from extract_vocs.m (in net_hole_climb_collab/analysis_ben/)
-  [b,a] = butter(6,30e3/(Fs/2),'high');
+  if ~isfield(handles.internal,'filter_prop')
+    [handles.internal.filter_prop.b handles.internal.filter_prop.a] = ...
+      butter(6,30e3/(Fs/2),'high');
+  end
+  b = handles.internal.filter_prop.b;
+  a = handles.internal.filter_prop.a;
   ddf=filtfilt(b,a,X);
   data_square=smooth(ddf.^2,200);
   plot(t,data_square,'k','linewidth',2);
