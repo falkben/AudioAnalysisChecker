@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 17-Jan-2013 11:58:18
+% Last Modified by GUIDE v2.5 05-Feb-2013 14:57:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -66,6 +66,7 @@ handles.internal = [];
 set(handles.processed_checkbox,'value',0);
 set(handles.save_menu,'enable','off');
 set(handles.save_open_next,'enable','off');
+set(handles.wave_axes_switch,'enable','off');
 
 
 function handles=load_audio(handles,pathname,filename)
@@ -141,6 +142,7 @@ add_text(handles,display_text);
 set(gcf,'Name',['AudioAnalysisChecker: ' handles.internal.audio_fname]);
 set(handles.save_open_next,'enable','on');
 set(handles.save_menu,'enable','on');
+set(handles.wave_axes_switch,'enable','on');
 update(handles);
 
 
@@ -220,23 +222,38 @@ jEdit.setCaretPosition(jEdit.getDocument.getLength);
 function update(handles)
 set(handles.voc_edit,'string',num2str(handles.internal.current_voc));
 
+Fs = handles.internal.Fs;
+voc_time = handles.internal.DataArray(handles.internal.current_voc);
+voc_sample = round((voc_time + 8)*Fs);
+
+%plot_wave_axes
 axes(handles.wave_axes);cla;
 
-Fs = handles.internal.Fs;
-
-voc_time = handles.internal.DataArray(handles.internal.current_voc);
-
-voc_sample = round((voc_time + 8)*Fs);
+contents = cellstr(get(handles.wave_axes_switch,'String')); %returns wave_axes_switch contents as cell array
+selected_wave_axes = contents{get(handles.wave_axes_switch,'Value')}; %returns selected item from wave_axes_switch
 
 buffer=round(handles.samples/2);
 sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.internal.waveform));
 X=handles.internal.waveform(sample_range);
-
 t=(sample_range)./Fs-8;
-plot(t(1:3:end),X(1:3:end),'k');
-axis tight;
-a=axis;
-axis([a(1:2) -10 10]);
+
+if strcmp(selected_wave_axes,'Waveform')
+  plot(t,X,'k');
+  axis tight;
+  a=axis;
+  axis([a(1:2) -10 10]);
+elseif strcmp(selected_wave_axes,'Smoothed, rectified')
+  %from extract_vocs.m (in net_hole_climb_collab/analysis_ben/)
+  [b,a] = butter(6,30e3/(Fs/2),'high');
+  ddf=filtfilt(b,a,X);
+  data_square=smooth(ddf.^2,200);
+  plot(t,data_square,'k','linewidth',2);
+  axis tight;
+  a=axis;
+%   axis([a(1:2) 0 2]);
+end
+
+a=axis; %for plotting markings, net crosses
 
 %displaying markings:
 all_voc_times=handles.internal.DataArray;
@@ -249,11 +266,11 @@ disp_voc_times=all_voc_times(voc_t_indx);
 voc_nums=find(voc_t_indx);
 hold on;
 for k=1:length(disp_voc_times)
-  plot([disp_voc_times(k) disp_voc_times(k)],[-10 10],'color','r');
+  plot([disp_voc_times(k) disp_voc_times(k)],[a(3) a(4)],'color','r');
 end
 text(disp_voc_times,-8*ones(length(voc_nums),1),num2str(voc_nums),...
   'horizontalalignment','center');
-plot([voc_time voc_time],[-10 10],'color',[.6 .6 1]);
+plot([voc_time voc_time],[a(3) a(4)],'color',[.6 .6 1]);
 hold off;
 text(disp_voc_times,zeros(length(disp_voc_times),1),...
   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
@@ -263,18 +280,18 @@ hold on;
 net_crossings = handles.internal.net_crossings;
 
 if a(1)<net_crossings(1)
-  plot([net_crossings(1) net_crossings(1)],[-5 5],'b','linewidth',2);
+  plot([net_crossings(1) net_crossings(1)],[a(3) a(4)]./2,'b','linewidth',2);
 end
 if a(2)>net_crossings(2)
-  plot([net_crossings(2) net_crossings(2)],[-5 5],'b','linewidth',2);
+  plot([net_crossings(2) net_crossings(2)],[a(3) a(4)]./2,'b','linewidth',2);
 end
 
 %plotting start and stop of the processed file if visible
 if a(1)<net_crossings(1)-.5
-  plot((net_crossings(1)-.5)*ones(2,1),[-5 5],'m','linewidth',2);
+  plot((net_crossings(1)-.5)*ones(2,1),[a(3) a(4)]./2,'m','linewidth',2);
 end
 if a(2)>net_crossings(2)+1
-  plot((net_crossings(2)+1)*ones(2,1),[-5 5],'g','linewidth',2);
+  plot((net_crossings(2)+1)*ones(2,1),[a(3) a(4)]./2,'g','linewidth',2);
 end
 hold off;
 
@@ -721,6 +738,15 @@ function playback_slowdown_factor_CreateFcn(hObject, eventdata, handles)
 
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function wave_axes_switch_Callback(hObject, eventdata, handles)
+update(handles);
+
+function wave_axes_switch_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
