@@ -99,7 +99,7 @@ handles.internal.audio_fname=filename;
 
 handles = load_marked_vocs(handles);
 
-if isempty(handles.internal.DataArray)
+if ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArray)
   return;
 end
 
@@ -147,9 +147,9 @@ update(handles);
 
 
 function handles = load_marked_vocs(handles)
-fn = gen_processed_fname(handles);
-if exist(fn,'file')
-  load(fn);
+[fn pn] = gen_processed_fname(handles);
+if exist([pn fn],'file')
+  load([pn fn]);
   handles.internal.net_crossings = (trial_data.net_crossings-length(trial_data.centroid))/300;
   handles.internal.DataArray = trial_data.voc_t;
   handles.internal.extracted_sound_data = trial_data;
@@ -158,55 +158,73 @@ if exist(fn,'file')
   disp(display_text)
   add_text(handles,display_text);
 else
-  if ispref('audioanalysischecker','marked_voc_pname')
-    DEFAULTNAME=getpref('audioanalysischecker','marked_voc_pname');
+  if ispref('audioanalysischecker','sound_data_pname')
+    DEFAULTNAME=getpref('audioanalysischecker','sound_data_pname');
   else
     DEFAULTNAME='';
   end
 
-  if ~exist([DEFAULTNAME 'sound_data.mat'],'file')
-    [~, DEFAULTNAME] = uigetfile('sound_data.mat',...
-      'Select processed sound data (sound_data.mat)',DEFAULTNAME);
-    if isequal(DEFAULTNAME,0)
-      return
+  if exist([DEFAULTNAME 'sound_data.mat'],'file')
+    handles = load_sound_data_mat(handles,DEFAULTNAME);
+  else
+    [~, sound_data_pname] = uigetfile('sound_data.mat',...
+      'Select sound_data.mat (pre-processed data for multiple files), cancel if not preprocessed',DEFAULTNAME);
+    if ~isequal(sound_data_pname,0)
+      handles = load_sound_data_mat(handles,sound_data_pname);
+    else
+      % dialog box to ask if you want to generate processed file
+      button = questdlg('Generate a pre-processed file?','Preprocess sound data?');
+      switch button
+        case 'Cancel'
+          return
+        case 'OK'
+          %preprocess sound data
+%           locs=extract_vocs(handles.sound_data,SR,2.5,.006,1)
+        case 'No'
+          %load the audio data and display it
+          %load in other markings?
+      end
     end
   end
-
-  handles.sound_data_file = [DEFAULTNAME 'sound_data.mat'];
-  %compare checksum to checksum in handles if it exists
-  %saves time loading sound_data.mat every time
-  [status result] = system(['md5\md5.exe ' handles.sound_data_file]);
-  if status == 0
-    space_indx=strfind(result,' ');
-    checksum = result(1:space_indx(1));
-  end
-  if isfield(handles,'sound_data') && strcmp(checksum,handles.sound_data_checksum)
-    extracted_sound_data = handles.sound_data;
-  else
-    load(handles.sound_data_file);
-    handles.sound_data = extracted_sound_data;
-    handles.sound_data_checksum = checksum;
-  end
-  
-  setpref('audioanalysischecker','marked_voc_pname',DEFAULTNAME);
-
-  all_trialcodes={extracted_sound_data.trialcode};
-  trialcode = determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]);
-  indx=find(strcmp(all_trialcodes,trialcode));
-
-  if isempty(indx)
-    handles.internal.DataArray=[];
-    display_text = ['Vicon trial: ' trialcode ' absent.'];
-    disp(display_text)
-    add_text(handles,display_text);
-    return;
-  end
-
-  handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
-  handles.internal.DataArray = extracted_sound_data(indx).voc_t;
-  handles.internal.extracted_sound_data = extracted_sound_data(indx);
-  handles.internal.changed=0;
 end
+
+%loads pre processed data from multiple trials and extracts the current
+%trial data
+function handles = load_sound_data_mat(handles,sound_data_pname)
+handles.sound_data_file = [sound_data_pname 'sound_data.mat'];
+%compare checksum to checksum in handles if it exists
+%saves time loading sound_data.mat if you're doing multiple trials
+[status result] = system(['md5\md5.exe ' handles.sound_data_file]);
+if status == 0
+  space_indx=strfind(result,' ');
+  checksum = result(1:space_indx(1));
+end
+if isfield(handles,'sound_data') && strcmp(checksum,handles.sound_data_checksum)
+  extracted_sound_data = handles.sound_data;
+else
+  load(handles.sound_data_file);
+  handles.sound_data = extracted_sound_data;
+  handles.sound_data_checksum = checksum;
+end
+
+setpref('audioanalysischecker','sound_data_pname',sound_data_pname);
+
+all_trialcodes={extracted_sound_data.trialcode};
+trialcode = determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]);
+indx=find(strcmp(all_trialcodes,trialcode));
+
+if isempty(indx)
+  handles.internal.DataArray=[];
+  display_text = ['Vicon trial: ' trialcode ' absent.'];
+  disp(display_text)
+  add_text(handles,display_text);
+  return;
+end
+
+handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
+handles.internal.DataArray = extracted_sound_data(indx).voc_t;
+handles.internal.extracted_sound_data = extracted_sound_data(indx);
+handles.internal.changed=0;
 
 
 function add_text(handles,text)
@@ -354,16 +372,16 @@ hold off; axis tight;
 title('Pulse Interval (ms)','fontsize',8)
 
 
-function fn = gen_processed_fname(handles)
-sound_file=[handles.internal.audio_pname handles.internal.audio_fname];
-fn=[sound_file(1:end-4) '_processed.mat'];
+function [fn pn] = gen_processed_fname(handles)
+fn=[handles.internal.audio_fname(1:end-4) '_processed.mat'];
+pn=handles.internal.audio_pname;
 
 function static = load_static()
 static = [];
 if ispref('audio_analysis_checker','static_trials')
   fullpath = getpref('audio_analysis_checker','static_trials');
 else
-  [file path] = uigetfile({'*.mat;'},'Load static file');
+  [file path] = uigetfile('static_trials.mat','Load static file (static_trials.mat)');
   if isequal(file,0)
     display_text = 'No static file chosen, exiting';
     disp(display_text);
@@ -406,8 +424,8 @@ trial_data.emission_t = calc_emission_times(D,t,trial_data.voc_t);
 trial_data.voc_checked=1;
 trial_data.voc_checked_time=datevec(now);
 
-fn=gen_processed_fname(handles);
-save(fn,'trial_data');
+[fn pn]=gen_processed_fname(handles);
+save([pn fn],'trial_data');
 handles.internal.changed = 0;
 display_text = ['Saved ' handles.internal.audio_fname ' at ' datestr(now,'HH:MM PM')];
 disp(display_text);
