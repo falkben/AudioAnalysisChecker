@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 05-Feb-2013 14:57:17
+% Last Modified by GUIDE v2.5 20-May-2013 15:24:36
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -67,6 +67,14 @@ set(handles.processed_checkbox,'value',0);
 set(handles.save_menu,'enable','off');
 set(handles.save_open_next,'enable','off');
 set(handles.wave_axes_switch,'enable','off');
+set_sound_data_path(handles);
+
+function set_sound_data_path(handles)
+if ispref('audioanalysischecker','sound_data_pname')
+  set(handles.sound_data_path_edit,'String',getpref('audioanalysischecker','sound_data_pname'))
+  set(handles.sound_data_path_edit,'TooltipString',getpref('audioanalysischecker','sound_data_pname'))
+  set(handles.clear_sound_data_path_pushbutton,'Enable','On');
+end
 
 
 function handles=load_audio(handles,pathname,filename)
@@ -170,6 +178,8 @@ else
     [~, sound_data_pname] = uigetfile('sound_data.mat',...
       'Select sound_data.mat (pre-processed data for multiple files), cancel if not preprocessed',DEFAULTNAME);
     if ~isequal(sound_data_pname,0)
+      setpref('audioanalysischecker','sound_data_pname',sound_data_pname);
+      set_sound_data_path(handles);
       handles = load_sound_data_mat(handles,sound_data_pname);
     else
       % dialog box to ask if you want to generate processed file
@@ -206,8 +216,6 @@ else
   handles.sound_data = extracted_sound_data;
   handles.sound_data_checksum = checksum;
 end
-
-setpref('audioanalysischecker','sound_data_pname',sound_data_pname);
 
 all_trialcodes={extracted_sound_data.trialcode};
 trialcode = determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]);
@@ -435,7 +443,7 @@ guidata(handles.save_menu,handles);
 
 function canceled = save_before_discard(handles)
 canceled = 0;
-if isfield(handles.internal,'changed') && handles.internal.changed
+if isfield(handles,'internal') && isfield(handles.internal,'changed') && handles.internal.changed
   f=gcf;
   choice = questdlg('Edits detected, save first?', ...
     'Save?', ...
@@ -773,3 +781,44 @@ function wave_axes_switch_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+
+function sound_data_path_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to sound_data_path_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of sound_data_path_edit as text
+%        str2double(get(hObject,'String')) returns contents of sound_data_path_edit as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function sound_data_path_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to sound_data_path_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function sound_data_path_pushbutton_Callback(hObject, eventdata, handles)
+if ispref('audioanalysischecker','sound_data_pname')
+  DEFAULTNAME=getpref('audioanalysischecker','sound_data_pname');
+else
+  DEFAULTNAME='';
+end
+[~, sound_data_pname] = uigetfile('sound_data.mat',...
+  'Select sound_data.mat (pre-processed data for multiple files), cancel if not preprocessed',DEFAULTNAME);
+if ~isequal(sound_data_pname,0)
+  setpref('audioanalysischecker','sound_data_pname',sound_data_pname);
+  set_sound_data_path(handles);
+end
+
+function clear_sound_data_path_pushbutton_Callback(hObject, eventdata, handles)
+setpref('audioanalysischecker','sound_data_pname','');
+set_sound_data_path(handles);
