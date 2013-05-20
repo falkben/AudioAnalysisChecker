@@ -53,14 +53,14 @@ if nargin > 4 && DIAG
   hold on;
   plot(locs,ones(length(locs),1),'*r'); hold off;
   
-  figure(4); clf;
-  [S,F,T,P] = spectrogram(ddf,256,250,512,SR);
-  imagesc(T,F,10*log10(P)); axis tight; set(gca,'YDir','normal');
-  colormap('hot');
-  caxis([-80 -15])
-%   hold on; plot(locs./SR,ones(length(locs),1)*20e3,'w*'); hold off;
-  text(locs./SR,ones(length(locs),1)*20e3,num2str([1:length(locs)]'),...
-    'color','w','horizontalalignment','center')
+%   figure(4); clf;
+%   [S,F,T,P] = spectrogram(ddf,256,250,256,SR);
+%   imagesc(T,F,10*log10(P)); axis tight; set(gca,'YDir','normal');
+%   colormap('hot');
+%   caxis([-80 -15])
+% %   hold on; plot(locs./SR,ones(length(locs),1)*20e3,'w*'); hold off;
+%   text(locs./SR,ones(length(locs),1)*20e3,num2str([1:length(locs)]'),...
+%     'color','w','horizontalalignment','center')
   
 %   sound(ddf,SR/20);
 
