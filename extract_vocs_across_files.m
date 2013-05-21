@@ -9,7 +9,7 @@ for dd=2:length(audio_dir)
   pathname=['wavebook\' audio_dir{dd}];
   files=dir([pathname '\*.bin']);
   
-  bat='B59';
+  bat='BK59';
   buff_before_trig=8;
   
   if exist('sound_data.mat','file')
@@ -23,7 +23,7 @@ for dd=2:length(audio_dir)
   
   for k=1:length(files)
     filename=files(k).name;
-    trialcode= ['20' filename(1:2) '.' filename(3:4) '.' filename(5:6) '.' ...
+    trialcode= [bat '.20' filename(1:2) filename(3:4) filename(5:6) '.' ...
       filename(7:8)];
     [fd,h,c] = OpenIoTechBinFile([pathname '\' filename]);
     waveforms = ReadChnlsFromFile(fd,h,c,10*250000,1);
@@ -48,6 +48,7 @@ for dd=2:length(audio_dir)
       locs = extract_vocs(waveform,Fs,2.5,.006,1);
       
       trt_data.voc_t=locs./Fs - buff_before_trig;
+      trt_data.ch = ch;
       trt_data.trialcode=trialcode;
       trt_data.bat=bat;
       trt_data.voc_checked=[];

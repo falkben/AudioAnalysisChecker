@@ -111,6 +111,12 @@ if ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArray)
   return;
 end
 
+if isfield(handles.internal,'ch')
+  ch=handles.internal.extracted_sound_data.ch;
+else
+  ch=1;
+end
+
 %determine which file it is from the marked filename
 if strcmp(filename(end-2:end),'mat') %loading from nidaq_matlab_tools
   warning('off','MATLAB:loadobj');
@@ -118,29 +124,17 @@ if strcmp(filename(end-2:end),'mat') %loading from nidaq_matlab_tools
   warning('on','MATLAB:loadobj');
   waveforms = audio.data;
   Fs = audio.SR;
+  waveform = waveforms(:,ch);
 elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
   [fd,h,c] = OpenIoTechBinFile([pathname '\' filename]);
-  [waveforms] = ReadChnlsFromFile(fd,h,c,10*250000,1);
+  waveforms = ReadChnlsFromFile(fd,h,c,10*250000,1);
   Fs = h.preFreq;
+  waveform = waveforms{ch};
 end
 
-% figure(1); clf;
-% for k=1:size(waveforms,2)
-%   subplot(size(waveforms,2),1,k)
-%   plot(waveforms(1:10:end,k));
-%   title(['Channel: ' num2str(k)]);
-% end
-% options.WindowStyle='normal';
-% channel = inputdlg('Which channel?','',1,{''},options);
-% close(1);
-% 
-% if isempty(channel)
-%   return;
-% end
-channel='1'; %speed up loading audio for 2012 data
-
-handles.internal.waveform=waveforms(:,str2double(channel));
+handles.internal.waveform=waveform;
 handles.internal.Fs=Fs;
+handles.internal.ch=ch;
 
 handles.internal.current_voc=1;
 display_text = ['Opened file: ' handles.internal.audio_fname];
@@ -158,7 +152,9 @@ function handles = load_marked_vocs(handles)
 [fn pn] = gen_processed_fname(handles);
 if exist([pn fn],'file')
   load([pn fn]);
-  handles.internal.net_crossings = (trial_data.net_crossings-length(trial_data.centroid))/300;
+  if isfield(trial_data,'net_crossings')
+    handles.internal.net_crossings = (trial_data.net_crossings-length(trial_data.centroid))/300;
+  end
   handles.internal.DataArray = trial_data.voc_t;
   handles.internal.extracted_sound_data = trial_data;
   set(handles.processed_checkbox,'value',1);
@@ -218,7 +214,8 @@ else
 end
 
 all_trialcodes={extracted_sound_data.trialcode};
-trialcode = determine_vicon_trialcode([handles.internal.audio_pname handles.internal.audio_fname]);
+trialcode = determine_video_trialcode([handles.internal.audio_pname ...
+  handles.internal.audio_fname]);
 indx=find(strcmp(all_trialcodes,trialcode));
 
 if isempty(indx)
@@ -229,7 +226,9 @@ if isempty(indx)
   return;
 end
 
-handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
+if isfield(extracted_sound_data(indx),'net_crossings')
+  handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
+end
 handles.internal.DataArray = extracted_sound_data(indx).voc_t;
 handles.internal.extracted_sound_data = extracted_sound_data(indx);
 handles.internal.changed=0;
@@ -280,8 +279,6 @@ elseif strcmp(selected_wave_axes,'Smoothed, rectified')
   data_square=smooth(ddf.^2,200);
   plot(t,data_square,'k','linewidth',2);
   axis tight;
-  a=axis;
-%   axis([a(1:2) 0 2]);
 end
 
 a=axis; %for plotting markings, net crosses
@@ -307,24 +304,26 @@ text(disp_voc_times,zeros(length(disp_voc_times),1),...
   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
 
 %displaying net crossings if visible
-hold on;
-net_crossings = handles.internal.net_crossings;
-
-if a(1)<net_crossings(1)
-  plot([net_crossings(1) net_crossings(1)],[a(3) a(4)]./2,'b','linewidth',2);
+if isfield(handles.internal,'net_crossings')
+  hold on;
+  net_crossings = handles.internal.net_crossings;
+  
+  if a(1)<net_crossings(1)
+    plot([net_crossings(1) net_crossings(1)],[a(3) a(4)]./2,'b','linewidth',2);
+  end
+  if a(2)>net_crossings(2)
+    plot([net_crossings(2) net_crossings(2)],[a(3) a(4)]./2,'b','linewidth',2);
+  end
+  
+  %plotting start and stop of the processed file if visible
+  if a(1)<net_crossings(1)-.5
+    plot((net_crossings(1)-.5)*ones(2,1),[a(3) a(4)]./2,'m','linewidth',2);
+  end
+  if a(2)>net_crossings(2)+1
+    plot((net_crossings(2)+1)*ones(2,1),[a(3) a(4)]./2,'g','linewidth',2);
+  end
+  hold off;
 end
-if a(2)>net_crossings(2)
-  plot([net_crossings(2) net_crossings(2)],[a(3) a(4)]./2,'b','linewidth',2);
-end
-
-%plotting start and stop of the processed file if visible
-if a(1)<net_crossings(1)-.5
-  plot((net_crossings(1)-.5)*ones(2,1),[a(3) a(4)]./2,'m','linewidth',2);
-end
-if a(2)>net_crossings(2)+1
-  plot((net_crossings(2)+1)*ones(2,1),[a(3) a(4)]./2,'g','linewidth',2);
-end
-hold off;
 
 %plotting spectrogram:
 axes(handles.spect_axes);cla;
@@ -370,12 +369,14 @@ if handles.internal.current_voc > 1
   plot(t(handles.internal.current_voc-1),PI(handles.internal.current_voc-1),...
     'o','linewidth',2,'color',[.6 .6 1]);
 end
-for k=1:length(handles.internal.net_crossings)
-  plot(handles.internal.net_crossings(k)*ones(2,1),[0 a(4)],...
-    'b','linewidth',2);
+if isfield(handles.internal,'net_crossings')
+  for k=1:length(handles.internal.net_crossings)
+    plot(handles.internal.net_crossings(k)*ones(2,1),[0 a(4)],...
+      'b','linewidth',2);
+  end
+  plot((handles.internal.net_crossings(1)-.5)*ones(2,1),[0 a(4)],'m','linewidth',2);
+  plot((handles.internal.net_crossings(2)+1)*ones(2,1),[0 a(4)],'g','linewidth',2);
 end
-plot((handles.internal.net_crossings(1)-.5)*ones(2,1),[0 a(4)],'m','linewidth',2);
-plot((handles.internal.net_crossings(2)+1)*ones(2,1),[0 a(4)],'g','linewidth',2);
 hold off; axis tight;
 title('Pulse Interval (ms)','fontsize',8)
 
@@ -402,13 +403,16 @@ end
 load(fullpath);
 
 function mic = get_microphone_position(static,handles)
+mic=0;
 trialcode = handles.internal.extracted_sound_data.trialcode;
 dots = strfind(trialcode,'.');
 static_day = static(~cellfun(@(c) isempty(c),...
   strfind({static.date},trialcode(dots(1)+1:dots(2)-1))));
-mic_indx = ~cellfun(@isempty,...
-  strfind({static_day.markers.name},'MealwormMicrophone'));
-mic = static_day.markers(mic_indx).point;
+if ~isempty(static_day)
+  mic_indx = ~cellfun(@isempty,...
+    strfind({static_day.markers.name},'MealwormMicrophone'));
+  mic = static_day.markers(mic_indx).point;
+end
 
 function save_trial(handles)
 trial_data=handles.internal.extracted_sound_data;
@@ -422,12 +426,14 @@ if isempty(static)
   add_text(handles,display_text);
   return;
 end
-mic = get_microphone_position(static,handles);
-NC=trial_data.net_crossings;
-frames=max(1,NC(1)-300):min(NC(2)+500,length(trial_data.sm_centroid));
-D=distance(trial_data.sm_centroid(frames,:),mic);
-t=frames/300-length(trial_data.centroid)/300;
-trial_data.emission_t = calc_emission_times(D,t,trial_data.voc_t);
+if isfield(trial_data,'net_crossings')
+  mic = get_microphone_position(static,handles);
+  NC=trial_data.net_crossings;
+  frames=max(1,NC(1)-300):min(NC(2)+500,length(trial_data.sm_centroid));
+  D=distance(trial_data.sm_centroid(frames,:),mic);
+  t=frames/300-length(trial_data.centroid)/300;
+  trial_data.emission_t = calc_emission_times(D,t,trial_data.voc_t);
+end
 
 trial_data.voc_checked=1;
 trial_data.voc_checked_time=datevec(now);
@@ -660,15 +666,19 @@ pname=handles.internal.audio_pname;
 all_files=dir([pname '*.mat']);
 processed_files=dir([pname '*processed.mat']);
 fnames_unsort=setdiff({all_files.name},{processed_files.name});
-
-fname_dates = cellfun(@(f) datenum(f(1:11),'dd-mmm-yyyy'),fnames_unsort);
-[~, ia] = sort(fname_dates);
-fname_tcodes = cellfun(@(f) str2double(f(13:14)),fnames_unsort);
-[~, ib] = sort(fname_tcodes);
-ia_order = 1:length(ia);
-A=[ia_order', ia_order(ib)'];
-[~, index]=sortrows(A,[1 2]);
-fnames = fnames_unsort(ia(index))';
+if isempty(fnames_unsort)
+  all_files=dir([pname '*.bin']);
+  fnames={all_files.name};
+else
+  fname_dates = cellfun(@(f) datenum(f(1:11),'dd-mmm-yyyy'),fnames_unsort);
+  [~, ia] = sort(fname_dates);
+  fname_tcodes = cellfun(@(f) str2double(f(13:14)),fnames_unsort);
+  [~, ib] = sort(fname_tcodes);
+  ia_order = 1:length(ia);
+  A=[ia_order', ia_order(ib)'];
+  [~, index]=sortrows(A,[1 2]);
+  fnames = fnames_unsort(ia(index))';  
+end
 
 handles=initialize(handles);
 

@@ -1,0 +1,41 @@
+%from audio full path
+function trialcode = determine_video_trialcode(fname)
+trialcode=0;
+
+[pathstr, name, ext] = fileparts(fname);
+load([getpref('audioanalysischecker','sound_data_pname') 'data_sheet.mat']);
+
+if strcmp(ext,'.bin')
+  %determine bat from pathstr
+  slashes = strfind(pathstr,'\');
+  colons = strfind(pathstr,':');
+  %find root directory
+  for k=2:length(slashes)
+    matches = find(strcmp(data_sheet(:,4),pathstr(colons(1)+1:slashes(k))), 1);
+    if isempty(matches)
+      break
+    end
+  end
+  matches = strcmp(data_sheet(:,4),pathstr(colons(1)+1:slashes(k-1)));
+  row_match = strcmp(data_sheet(matches,5),pathstr(slashes(k-1)+1:slashes(k)));
+  bat = data_sheet{row_match,1};
+  trialcode = [bat '.20' name(1:2) name(3:4) name(5:6) '.' name(7:8)];
+elseif strcmp(ext,'.mat')
+  slashes = strfind(fname,'\');
+  
+  bat = fname(slashes(end-1)+1:slashes(end)-1);
+  date = datevec(fname(slashes(end)+1:end-7),'dd-mmm-yyyy');
+  num=fname(slashes(end)+13:end-4);
+
+  bat_indx=~cellfun(@isempty,strfind(data_sheet(:,2),bat));
+  date_indx=~cellfun(@isempty,strfind(data_sheet(:,1),...
+    [num2str(date(2)) '/' num2str(date(3)) '/' num2str(date(1))]));
+  num_indx=cellfun(@ (c) isequal(str2double(num),c),data_sheet(:,3));
+
+  indx=bat_indx&date_indx&num_indx;
+  if ~isempty(find(indx,1))
+    vicon_num=data_sheet{indx,4};
+    trialcode=[bat '.' datestr(date,'yyyymmdd') '.' num2str(vicon_num,'%02d')];
+  end
+end
+
