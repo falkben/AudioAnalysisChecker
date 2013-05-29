@@ -10,16 +10,16 @@ if strcmp(ext,'.bin')
   slashes = strfind(pathstr,'\');
   colons = strfind(pathstr,':');
   %find root directory
+  matches={};
   for k=2:length(slashes)
-    matches = find(strcmp(data_sheet(:,4),pathstr(colons(1)+1:slashes(k))), 1);
-    if isempty(matches)
-      break
-    end
+    matches{k} = find(strcmp(data_sheet(:,4),pathstr(colons(1)+1:slashes(k))), 1);
   end
-  matches = strcmp(data_sheet(:,4),pathstr(colons(1)+1:slashes(k-1)));
-  row_match = strcmp(data_sheet(matches,5),pathstr(slashes(k-1)+1:slashes(k)));
-  bat = data_sheet{row_match,1};
-  trialcode = [bat '.20' name(1:2) name(3:4) name(5:6) '.' name(7:8)];
+  last_match = matches{find(~cellfun(@isempty,matches),1,'last')};
+%   matches = strcmp(data_sheet(:,4),pathstr(colons(1)+1:slashes(k-1)));
+  row_match = strcmp(data_sheet(last_match,5),[pathstr(slashes(end)+1:end) '\']);
+  bat = data_sheet{last_match(row_match),1};
+  trialcode = [bat '.20' name([5 6 3 4 1 2]) '.' name(7:8)];
+%   trialcode = [bat '.20' name(1:2) name(3:4) name(5:6) '.' name(7:8)];
 elseif strcmp(ext,'.mat')
   slashes = strfind(fname,'\');
   
