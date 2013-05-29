@@ -231,6 +231,9 @@ if isfield(extracted_sound_data(indx),'net_crossings')
 end
 handles.internal.DataArray = extracted_sound_data(indx).voc_t;
 handles.internal.extracted_sound_data = extracted_sound_data(indx);
+if isfield(handles.internal.extracted_sound_data,'ch')
+  handles.internal.ch = handles.internal.extracted_sound_data.ch;
+end
 handles.internal.changed=0;
 
 
