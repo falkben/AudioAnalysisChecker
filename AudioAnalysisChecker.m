@@ -299,7 +299,7 @@ hold on;
 for k=1:length(disp_voc_times)
   plot([disp_voc_times(k) disp_voc_times(k)],[a(3) a(4)],'color','r');
 end
-text(disp_voc_times,-8*ones(length(voc_nums),1),num2str(voc_nums),...
+text(disp_voc_times,(a(4)-.1*(a(4)-a(3)))*ones(length(voc_nums),1),num2str(voc_nums),...
   'horizontalalignment','center');
 plot([voc_time voc_time],[a(3) a(4)],'color',[.6 .6 1]);
 hold off;
