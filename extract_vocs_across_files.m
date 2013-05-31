@@ -2,12 +2,16 @@ clear;
 
 sound_data_dir = 'F:\eptesicus_forest_collab\';
 
-bat_band='BK52';
+bat_band='BK57';
 % BK59 OR40 B52 B57 P72 W50
 data_year=2009;
 
-[~, ~, BG_fnames, batgadget_path, ~, ~, ~, ~, dates, data_year, wavebook_path]...
+orig_dir = pwd;
+cd('F:\eptesicus_forest_collab\lasse_forest_exploration\')
+[~, ~, BG_fnames, batgadget_path, ~, ~, ~, ~, dates, data_year, ...
+  wavebook_path, wavebook_naming]...
   =return_processed_file_names(bat_band,data_year);
+cd(orig_dir);
 
 base_path='F:\eptesicus_forest_collab\lasse_forest_exploration\';
 
@@ -60,8 +64,7 @@ for k=1:length(files)
     ch=str2double(channel);
     waveform=waveforms{ch};
     
-    %extract audio from during, before, after net climb
-    locs = extract_vocs(waveform,Fs,2.5,.006,1);
+    locs = extract_vocs(waveform,Fs,2,.006,2,0);
     
     trt_data.voc_t=locs./Fs - buff_before_trig;
     trt_data.trialcode=trialcode;
@@ -70,12 +73,13 @@ for k=1:length(files)
     trt_data.voc_checked_time=[];
     trt_data.ch = ch;
     indx=find(strcmp(trialcodes,trt_data.trialcode));
-    if ~isempty(indx) && ~isequal(extracted_sound_data(indx),trt_data)
+    if ~isempty(indx)
       extracted_sound_data(indx) = trt_data;
     else
       extracted_sound_data(end+1) = trt_data;
     end
+    save([sound_data_dir 'sound_data.mat'],'extracted_sound_data');
   end
-  save([sound_data_dir 'sound_data.mat'],'extracted_sound_data');
+  disp(['File ' num2str(k) ' of ' num2str(length(files))]);
 end
 

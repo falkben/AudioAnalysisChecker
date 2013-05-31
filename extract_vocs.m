@@ -1,8 +1,8 @@
 %thresh_mult, how much above noise to mark a call
 %min_PI, acceptable amount of time (sec) between calls
-function locs=extract_vocs(dd,SR,thesh_mult,min_PI,DIAG)
+function [locs pks]=extract_vocs(dd,SR,thesh_mult,min_PI,echo_rem_iterations,DIAG)
 
-%remove extraneous sounds, below 30k
+%remove extraneous sounds below 30k
 [b,a] = butter(6,30e3/(SR/2),'high');
 ddf=filtfilt(b,a,dd);
 % freqz(b,a,SR/2,SR);
@@ -16,12 +16,14 @@ thresh=thesh_mult*noise; %.01
 [pks,locs]=findpeaks(data_square,'MINPEAKDISTANCE',min_PI*SR,...
   'MINPEAKHEIGHT',thresh);
 
-PI=diff(locs/SR)*1e3; %in ms
-peak_ratio=pks(1:end-1)./pks(2:end);
-remove_pks = [false; PI < 15] & [false; peak_ratio > 5];
+for k=1:echo_rem_iterations
+  PI=diff(locs/SR)*1e3; %in ms
+  peak_ratio=pks(1:end-1)./pks(2:end);
+  remove_pks = [false; PI < 15] & [false; peak_ratio > 5];
 
-locs(remove_pks)=[];
-pks(remove_pks)=[];
+  locs(remove_pks)=[];
+  pks(remove_pks)=[];
+end
 
 if nargin > 4 && DIAG
   buffer=.004*SR;
@@ -70,6 +72,10 @@ if nargin > 4 && DIAG
   plot(locs,ones(length(locs),1)*mean(pks),'*r');
   plot([0 length(data_square)],[thresh thresh],'m');
   hold off;
+  
+  figure(7); clf;
+  plot(locs(2:end)/SR,diff(locs/SR)*1e3,'.-')
+  axis tight;
 end
 
 
