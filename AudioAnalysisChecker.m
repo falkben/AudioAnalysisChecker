@@ -220,7 +220,7 @@ indx=find(strcmp(all_trialcodes,trialcode));
 
 if isempty(indx)
   handles.internal.DataArray=[];
-  display_text = ['Vicon trial: ' trialcode ' absent.'];
+  display_text = ['trial: ' trialcode ' absent.'];
   disp(display_text)
   add_text(handles,display_text);
   return;
