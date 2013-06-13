@@ -1,55 +1,118 @@
-function [durs, voc_t] = extract_dur(waveform,Fs,voc_t,trial_start,trial_end,noise)
+function [durs, voc_t] = extract_dur(waveform,data_square,Fs,voc_t,trial_start,trial_end,noise,b2mD,DIAG)
 
-voc_t=voc_t(voc_t > trial_start & voc_t < trial_end);
+used_vocs = voc_t > trial_start & voc_t < trial_end;
+voc_t=voc_t(used_vocs);
+%it's possible that you don't have a bat position for each vocalization
+%even after this if you have more than one d3 trial or some ignore segments
+b2mD=b2mD(used_vocs);
 durs=nan(length(voc_t),1);
+I=nan(length(voc_t),1);
 
 voc_samps = round(voc_t*Fs + 8*Fs);
-[b,a] = butter(6,30e3/(Fs/2),'high');
+
+lvl_diff = 20*log10(b2mD);
 
 for k=1:length(voc_samps)
   voc_samp = voc_samps(k);
   voc = waveform(voc_samp - .005*Fs:voc_samp + .006*Fs);
+  data_square_voc = data_square(voc_samp - .005*Fs:voc_samp + .006*Fs);
   
-  ddf=filtfilt(b,a,voc);
-  % freqz(b,a,SR/2,SR);
-  data_square=smooth(ddf.^2,100);
+  [pk, loc]= max(data_square_voc( .005*Fs - .0005*Fs:.005*Fs + .0005*Fs));
+  loc = loc + .005*Fs - .0005*Fs;
   
-  [pk, loc] = findpeaks(data_square,'NPEAKS',1,...
-    'MINPEAKHEIGHT',max(data_square)*.5);
-  voc_s = find(noise*1.5 > data_square(1:loc),1,'last');
-  voc_e = find(noise*1.5 > data_square(loc:end),1,'first') + loc;
+  I(k) = 20*log10(sqrt(pk)) + lvl_diff(k);
   
+  thresh = noise*1.5;
   
-  figure(1);
-  clf; 
-  plot(voc);
-  hold on;
-  plot([voc_s voc_s],[min(voc) max(voc)],'r');
-  plot([voc_e voc_e],[min(voc) max(voc)],'r');
-  axis tight;
+  if pk < 2e-3
+    thresh = thresh/1.8;
+  elseif pk > .5
+    thresh = thresh*40;
+  elseif pk > .06
+    thresh = thresh*10;
+  elseif pk > .03
+    thresh = thresh*6;
+  elseif pk > 7e-3
+    thresh = thresh*1.5;
+  end
   
-  figure(2);
-  clf;
-  [S,F,T,P] = spectrogram(voc,256,250,256,Fs);
-  imagesc(T,F,10*log10(P)); axis tight; set(gca,'YDir','normal');
-  hold on;
-  plot([voc_s voc_s]./Fs,[0 Fs/2],'r');
-  plot([voc_e voc_e]./Fs,[0 Fs/2],'r');
-  
-  figure(3);
-  clf;
-  plot(data_square);
-  hold on;
-  plot([voc_s voc_s],[0 max(data_square)],'r');
-  plot([voc_e voc_e],[0 max(data_square)],'r');
-  axis tight;
-  
-  figure(4);
-  clf;
-  NFFT=1024;
-  Y=fft(voc,NFFT);
-  f=Fs/2*linspace(0,1,NFFT/2+1);
-  plot(f,smooth(2*abs(Y(1:NFFT/2+1)),10))
-  
-%   pause(.1);
+  [voc_s,thresh1]=find_thresh_crossing(data_square_voc(1:loc),thresh,pk,0,'last');
+  [voc_e,thresh2]=find_thresh_crossing(data_square_voc(loc:end),thresh,pk,loc,'first');
+    
+  durs(k)=(voc_e-voc_s)./Fs;
+    
+  if DIAG
+    figure(1);
+    clf;
+    hh(1)=subplot(3,1,1);
+    plot((1:length(voc))./Fs,voc);
+    hold on;
+    plot([voc_s voc_s]./Fs,[min(voc) max(voc)],'r');
+    plot([voc_e voc_e]./Fs,[min(voc) max(voc)],'r');
+    axis tight;
+    aa=axis;
+    
+    hh(2)=subplot(3,1,2); cla;
+    [S,F,T,P] = spectrogram(voc,256,250,256,Fs);
+    imagesc(T,F,10*log10(P)); set(gca,'YDir','normal');
+    set(gca,'clim',[-90 -45]);
+    hold on;
+    plot([voc_s voc_s]./Fs,[0 Fs/2],'r');
+    plot([voc_e voc_e]./Fs,[0 Fs/2],'r');
+    axis tight;
+    aaa=axis;
+    axis([aa(1:2) aaa(3:4)]);
+    
+    hh(3)=subplot(3,1,3); cla;
+    plot((1:length(data_square_voc))./Fs,data_square_voc);
+    hold on;
+    plot([voc_s voc_s]./Fs,[0 max(data_square_voc)],'r');
+    plot([voc_e voc_e]./Fs,[0 max(data_square_voc)],'r');
+    plot([0,length(data_square_voc)/2]./Fs,[thresh1 thresh1],'g');
+    plot([length(data_square_voc)/2,length(data_square_voc)]./Fs,...
+      [thresh2 thresh2],'g');
+    plot(loc./Fs,pk,'*g');
+    axis tight;
+    
+    linkaxes(hh,'x');
+    
+    figure(2); clf;
+    plot((1:length(data_square_voc(2:end)))./Fs,smooth(diff(data_square_voc-thresh),50));
+    axis tight;
+    aa = axis;
+    hold on;
+    plot([voc_s voc_s]./Fs,[0 aa(4)],'r');
+    plot([voc_e voc_e]./Fs,[0 aa(4)],'r');
+    plot(loc./Fs,pk,'*g');
+    
+    
+    figure(4); clf;
+    NFFT=1024;
+    Y=fft(voc(voc_s:voc_e),NFFT);
+    f=Fs/2*linspace(0,1,NFFT/2+1);
+    plot(f,smooth(2*abs(Y(1:NFFT/2+1)),10))
+    axis tight;
+    
+    figure(5); clf;
+    scatter(b2mD,sqrt(data_square(voc_samps)));
+    hold on;
+    plot(b2mD(k),sqrt(data_square(voc_samps(k))),'or','markerfacecolor','r');
+    
+    figure(6); clf;
+    scatter(durs,I);
+        
+%     pause(.1);
+  end
 end
+
+
+function [cross, thresh]= find_thresh_crossing(data,thresh,pk,offset,type)
+cross = find(data < thresh,1,type);
+while isempty(cross)
+  thresh = thresh*2;
+  cross = find(data < thresh,1,type);
+  if thresh > pk
+    break;
+  end
+end
+cross = cross + offset;

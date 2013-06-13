@@ -56,15 +56,45 @@ for dd=2:length(audio_dir)
       trial_start = max(-8,d3_start);
       trial_end = min(0,d3_end);
       
-      %remove extraneous sounds below 30k
-      [b,a] = butter(6,30e3/(Fs/2),'high');
+      %remove extraneous sounds below 20k
+      [b,a] = butter(6,20e3/(Fs/2),'high');
       ddf=filtfilt(b,a,waveform);
       % freqz(b,a,SR/2,SR);
       data_square=smooth(ddf.^2,200);
       noise = median(max(reshape(data_square(1:floor(length(data_square)/1e3)*1e3),...
         1e3,[])));
       
-      extract_dur(waveform,Fs,trial_data.voc_t,trial_start,trial_end,noise);
+      cd(base_path);
+      b2mD_comb=nan(length(trial_data.voc_t),1);
+      d3_indx = match_WB_fname_d3_fnames(WB_fname,d3_fnames,wavebook_naming);
+      for jj=1:length(d3_indx)
+        load([base_path d3_path d3_fnames{d3_indx(jj)}]);
+        bat=d3_analysed.object(1).video;
+        if isfield(d3_analysed,'ignore_segs')
+          for ii=1:size(d3_analysed.ignore_segs,1)
+            bat(d3_analysed.ignore_segs(ii,1):...
+              d3_analysed.ignore_segs(ii,2),:)=nan;
+          end
+        end
+        object_names = {d3_analysed.object.name};
+        mic_objs_i = find(~cellfun(@isempty,strfind(object_names,'mic')));
+        mic_obj = d3_analysed.object(mic_objs_i(trial_data.ch));
+        bat_frame = ...
+          mictime2frame(trial_data.voc_t,bat,mic_obj.video(1,:),...
+          d3_analysed.fvideo,d3_analysed.startframe);
+        b2mD=distance2(bat,mic_obj.video(1:length(bat),:));
+        bat_indx_comb=bat_frame-d3_analysed.startframe+1;
+        b2mD_comb(~isnan(bat_indx_comb)) = ...
+          b2mD(bat_indx_comb(~isnan(bat_indx_comb)));
+      end
+      cd(orig_dir);
+      
+      if isempty(d3_indx)
+        disp(['no video trial found for ' WB_fname]);
+      else
+        [durs, voc_t] = extract_dur(waveform,data_square,Fs,trial_data.voc_t,trial_start,trial_end,noise,b2mD_comb,0);
+        trial_data.duration_data = [voc_t, durs];
+      end
     end
   end
 end
