@@ -92,8 +92,8 @@ for dd=2:length(audio_dir)
       if isempty(d3_indx)
         disp(['no video trial found for ' WB_fname]);
       else
-        [durs, voc_t] = extract_dur(waveform,data_square,Fs,trial_data.voc_t,trial_start,trial_end,noise,b2mD_comb,0);
-        trial_data.duration_data = [voc_t, durs];
+        [onsets, offsets, voc_t, I] = extract_dur(waveform,data_square,Fs,trial_data.voc_t,trial_start,trial_end,noise,b2mD_comb,1,1);
+        trial_data.duration_data = [voc_t, onsets, offsets];
       end
     end
   end
