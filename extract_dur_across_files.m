@@ -26,7 +26,7 @@ audio_dir(ismember(audio_dir,{'.','..'})) = [];
 for dd=2:length(audio_dir)
   pathname=[base_path wavebook_path audio_dir{dd}];
   files=dir([pathname '\*.bin']);
-  for k=1:length(files)
+  for k=3:length(files)
     WB_fname = files(k).name;
     proc_fname_indx = find(~cellfun(@isempty,strfind(processed_audio_fnames,...
       WB_fname(1:end-4))));
@@ -56,14 +56,6 @@ for dd=2:length(audio_dir)
       trial_start = max(-8,d3_start);
       trial_end = min(0,d3_end);
       
-      %remove extraneous sounds below 20k
-      [b,a] = butter(6,20e3/(Fs/2),'high');
-      ddf=filtfilt(b,a,waveform);
-      % freqz(b,a,SR/2,SR);
-      data_square=smooth(ddf.^2,200);
-      noise = median(max(reshape(data_square(1:floor(length(data_square)/1e3)*1e3),...
-        1e3,[])));
-      
       cd(base_path);
       b2mD_comb=nan(length(trial_data.voc_t),1);
       d3_indx = match_WB_fname_d3_fnames(WB_fname,d3_fnames,wavebook_naming);
@@ -92,7 +84,8 @@ for dd=2:length(audio_dir)
       if isempty(d3_indx)
         disp(['no video trial found for ' WB_fname]);
       else
-        [onsets, offsets, voc_t, I] = extract_dur(waveform,data_square,Fs,trial_data.voc_t,trial_start,trial_end,noise,b2mD_comb,1,1);
+        [onsets, offsets, voc_t, I] = extract_dur(waveform,Fs,...
+          trial_data.voc_t,trial_start,trial_end,b2mD_comb,0,1);
         trial_data.duration_data = [voc_t, onsets, offsets];
       end
     end
