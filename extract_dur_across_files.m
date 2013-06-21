@@ -26,7 +26,7 @@ audio_dir(ismember(audio_dir,{'.','..'})) = [];
 for dd=2:length(audio_dir)
   pathname=[base_path wavebook_path audio_dir{dd}];
   files=dir([pathname '\*.bin']);
-  for k=3:length(files)
+  for k=1:length(files)
     WB_fname = files(k).name;
     proc_fname_indx = find(~cellfun(@isempty,strfind(processed_audio_fnames,...
       WB_fname(1:end-4))));
