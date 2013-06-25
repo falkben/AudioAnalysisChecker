@@ -18,6 +18,9 @@ d=dir([base_path wavebook_path]);
 isub = [d(:).isdir];
 audio_dir = {d(isub).name}';
 audio_dir(ismember(audio_dir,{'.','..'})) = [];
+if isempty(audio_dir)
+  audio_dir{1}='';
+end
 
 buff_before_trig=8;
 
