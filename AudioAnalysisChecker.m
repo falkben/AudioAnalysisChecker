@@ -124,16 +124,19 @@ if strcmp(filename(end-2:end),'mat') %loading from nidaq_matlab_tools
   warning('on','MATLAB:loadobj');
   waveforms = audio.data;
   Fs = audio.SR;
+  length_t = audio.pretrigger;
   waveform = waveforms(:,ch);
 elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
   [fd,h,c] = OpenIoTechBinFile([pathname '\' filename]);
-  waveforms = ReadChnlsFromFile(fd,h,c,10*250000,1);
   Fs = h.preFreq;
+  length_t=h.PreCount/Fs;
+  waveforms = ReadChnlsFromFile(fd,h,c,length_t*Fs,1);
   waveform = waveforms{ch};
 end
 
 handles.internal.waveform=waveform;
 handles.internal.Fs=Fs;
+handles.internal.length_t = length_t;
 handles.internal.ch=ch;
 
 handles.internal.current_voc=1;
@@ -252,7 +255,7 @@ set(handles.voc_edit,'string',num2str(handles.internal.current_voc));
 
 Fs = handles.internal.Fs;
 voc_time = handles.internal.DataArray(handles.internal.current_voc);
-voc_sample = round((voc_time + 8)*Fs);
+voc_sample = round((voc_time + handles.internal.length_t)*Fs);
 
 %plot_wave_axes
 axes(handles.wave_axes);cla;
@@ -263,7 +266,7 @@ selected_wave_axes = contents{get(handles.wave_axes_switch,'Value')}; %returns s
 buffer=round(handles.samples/2);
 sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.internal.waveform));
 X=handles.internal.waveform(sample_range);
-t=(sample_range)./Fs-8;
+t=(sample_range)./Fs-handles.internal.length_t;
 
 if strcmp(selected_wave_axes,'Waveform')
   plot(t,X,'k');
@@ -730,7 +733,7 @@ function playbutton_Callback(hObject, eventdata, handles)
 
 voc_time = handles.internal.DataArray(handles.internal.current_voc);
 
-voc_sample = round((voc_time + 8)*handles.internal.Fs);
+voc_sample = round((voc_time + handles.internal.length_t)*handles.internal.Fs);
 
 buffer=handles.samples/2;
 sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.internal.waveform));

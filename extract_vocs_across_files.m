@@ -2,7 +2,7 @@ clear;
 
 sound_data_dir = 'F:\eptesicus_forest_collab\';
 
-bat_band='B53';
+bat_band='W50';
 % BK59 OR40 B52 B57 B53 OR44 P72 W50
 data_year=2008;
 
@@ -51,9 +51,11 @@ for dd=1:length(audio_dir)
     %       filename(7:8)];
     trialcode=[bat_band '.20' filename([5 6 3 4 1 2]) '.' ...
       filename(7:8)];
+    
     [fd,h,c] = OpenIoTechBinFile([pathname '\' filename]);
-    waveforms = ReadChnlsFromFile(fd,h,c,10*250000,1);
     Fs = h.preFreq;
+    length_t=h.PreCount/Fs;
+    waveforms = ReadChnlsFromFile(fd,h,c,length_t*Fs,1);
     
     figure(1); clf;
     hh=[];
@@ -99,7 +101,7 @@ for dd=1:length(audio_dir)
       else
         extracted_sound_data(end+1) = trt_data;
       end
-      %     save([sound_data_dir 'sound_data.mat'],'extracted_sound_data');
+      save([sound_data_dir 'sound_data.mat'],'extracted_sound_data');
     end
     disp(['File ' num2str(k) ' of ' num2str(length(files))]);
   end
