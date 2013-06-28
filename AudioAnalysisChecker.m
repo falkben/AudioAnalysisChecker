@@ -391,7 +391,7 @@ function [fn pn] = gen_processed_fname(handles)
 fn=[handles.internal.audio_fname(1:end-4) '_processed.mat'];
 pn=handles.internal.audio_pname;
 
-function static = load_static()
+function static = load_static(handles)
 static = [];
 if ispref('audio_analysis_checker','static_trials')
   fullpath = getpref('audio_analysis_checker','static_trials');
@@ -425,17 +425,15 @@ trial_data=handles.internal.extracted_sound_data;
 trial_data.voc_t=handles.internal.DataArray;
 
 %calculating emission times
-static = load_static();
+static = load_static(handles);
 if isempty(static)
-  display_text = 'Couldn''t load static trial for determining emission time, trial not saved';
+  display_text = 'Couldn''t load static trial for determining emission time, emission times not calculated';
   disp(display_text);
   add_text(handles,display_text);
-  return;
-end
-if isfield(trial_data,'net_crossings')
-  mic = get_microphone_position(static,handles);
+elseif isfield(trial_data,'net_crossings')
   NC=trial_data.net_crossings;
   frames=max(1,NC(1)-300):min(NC(2)+500,length(trial_data.sm_centroid));
+  mic = get_microphone_position(static,handles);
   D=distance(trial_data.sm_centroid(frames,:),mic);
   t=frames/300-length(trial_data.centroid)/300;
   trial_data.emission_t = calc_emission_times(D,t,trial_data.voc_t);
