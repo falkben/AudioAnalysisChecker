@@ -309,6 +309,21 @@ hold off;
 text(disp_voc_times,zeros(length(disp_voc_times),1),...
   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
 
+if isfield(handles.internal.extracted_sound_data,'d3_start')
+  d3_start = handles.internal.extracted_sound_data.d3_start;
+  d3_end = handles.internal.extracted_sound_data.d3_end;
+  if a(1)<d3_start && a(2) > d3_start
+    hold on;
+    plot([d3_start d3_start],a(3:4)./2,'g','linewidth',2);
+    hold off;
+  end
+  if a(1)<d3_end && a(2) > d3_end
+    hold on;
+    plot([d3_end d3_end],a(3:4)./2,'g','linewidth',2);
+    hold off;
+  end
+end
+
 %displaying net crossings if visible
 if isfield(handles.internal,'net_crossings')
   hold on;
@@ -383,6 +398,14 @@ if isfield(handles.internal,'net_crossings')
   plot((handles.internal.net_crossings(1)-.5)*ones(2,1),[0 a(4)],'m','linewidth',2);
   plot((handles.internal.net_crossings(2)+1)*ones(2,1),[0 a(4)],'g','linewidth',2);
 end
+
+if isfield(handles.internal.extracted_sound_data,'d3_start')
+  d3_start = handles.internal.extracted_sound_data.d3_start;
+  d3_end = handles.internal.extracted_sound_data.d3_end;
+  plot([d3_start d3_start],a(3:4),'g','linewidth',2);
+  plot([d3_end d3_end],a(3:4),'g','linewidth',2);
+end
+
 hold off; axis tight;
 title('Pulse Interval (ms)','fontsize',8)
 

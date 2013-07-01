@@ -1,12 +1,12 @@
 clear;
 
-sound_data_dir = 'F:\eptesicus_forest_collab\';
+sound_data_dir = getpref('audioanalysischecker','sound_data_pname');
 
-bat_band='W50';
+bat_band='BK53';
 % BK59 OR40 B52 B57 B53 OR44 P72 W50
 data_year=2008;
 
-base_path='F:\eptesicus_forest_collab\lasse_forest_exploration\';
+base_path=[sound_data_dir 'lasse_forest_exploration\'];
 orig_dir = pwd;
 cd(base_path)
 [d3_fnames, d3_path, ~, ~, ~, ~, ~, ~, ~, data_year, ...
@@ -21,8 +21,6 @@ audio_dir(ismember(audio_dir,{'.','..'})) = [];
 if isempty(audio_dir)
   audio_dir{1}='';
 end
-
-buff_before_trig=8;
 
 if exist([sound_data_dir 'sound_data.mat'],'file')
   load([sound_data_dir 'sound_data.mat'])
@@ -39,13 +37,13 @@ else
   trialcodes={};
 end
 
-for dd=1:length(audio_dir)
+for dd=2:length(audio_dir)
   
   pathname=[base_path wavebook_path audio_dir{dd}];
   % pathname=[base_path wavebook_path];
   files=dir([pathname '\*.bin']);
   
-  for k=1:length(files)
+  for k=8:length(files)
     filename=files(k).name;
     %     trialcode= [bat_band '.20' filename(1:2) filename(3:4) filename(5:6) '.' ...
     %       filename(7:8)];
@@ -76,7 +74,7 @@ for dd=1:length(audio_dir)
       
       locs = extract_vocs(waveform,Fs,2,.006,2,0);
       
-      trt_data.voc_t=locs./Fs - buff_before_trig;
+      trt_data.voc_t=locs./Fs - length_t;
       trt_data.trialcode=trialcode;
       trt_data.bat=bat_band;
       trt_data.voc_checked=[];
@@ -103,6 +101,7 @@ for dd=1:length(audio_dir)
       end
       save([sound_data_dir 'sound_data.mat'],'extracted_sound_data');
     end
-    disp(['File ' num2str(k) ' of ' num2str(length(files))]);
+    disp(['File ' num2str(k) ' of ' num2str(length(files)) ...
+      ' dir ' num2str(dd) ' of ' num2str(length(audio_dir))]);
   end
 end
