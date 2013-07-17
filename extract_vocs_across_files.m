@@ -2,7 +2,7 @@ clear;
 
 sound_data_dir = getpref('audioanalysischecker','sound_data_pname');
 
-bat_band='BK53';
+bat_band='BK52';
 % BK59 OR40 B52 B57 B53 OR44 P72 W50
 data_year=2008;
 
@@ -37,13 +37,13 @@ else
   trialcodes={};
 end
 
-for dd=2:length(audio_dir)
+for dd=1:length(audio_dir)-1
   
   pathname=[base_path wavebook_path audio_dir{dd}];
   % pathname=[base_path wavebook_path];
   files=dir([pathname '\*.bin']);
   
-  for k=8:length(files)
+  for k=1:length(files)
     filename=files(k).name;
     %     trialcode= [bat_band '.20' filename(1:2) filename(3:4) filename(5:6) '.' ...
     %       filename(7:8)];

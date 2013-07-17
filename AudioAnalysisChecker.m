@@ -111,7 +111,7 @@ if ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArray)
   return;
 end
 
-if isfield(handles.internal,'ch')
+if isfield(handles.internal.extracted_sound_data,'ch')
   ch=handles.internal.extracted_sound_data.ch;
 else
   ch=1;
@@ -126,12 +126,14 @@ if strcmp(filename(end-2:end),'mat') %loading from nidaq_matlab_tools
   Fs = audio.SR;
   length_t = audio.pretrigger;
   waveform = waveforms(:,ch);
+  handles.internal.waveform_y_range = [-10 10];
 elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
   [fd,h,c] = OpenIoTechBinFile([pathname '\' filename]);
   Fs = h.preFreq;
   length_t=h.PreCount/Fs;
   waveforms = ReadChnlsFromFile(fd,h,c,length_t*Fs,1);
   waveform = waveforms{ch};
+  handles.internal.waveform_y_range = [-5 5];
 end
 
 handles.internal.waveform=waveform;
@@ -272,7 +274,7 @@ if strcmp(selected_wave_axes,'Waveform')
   plot(t,X,'k');
   axis tight;
   a=axis;
-  axis([a(1:2) -10 10]);
+  axis([a(1:2) handles.internal.waveform_y_range]);
 elseif strcmp(selected_wave_axes,'Smoothed, rectified')
   %from extract_vocs.m (in net_hole_climb_collab/analysis_ben/)
   if ~isfield(handles.internal,'filter_prop')
