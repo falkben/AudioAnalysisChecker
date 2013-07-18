@@ -151,6 +151,7 @@ set(handles.save_open_next,'enable','on');
 set(handles.save_menu,'enable','on');
 set(handles.wave_axes_switch,'enable','on');
 update(handles);
+guidata(gcbo, handles);
 
 
 function handles = load_marked_vocs(handles)
@@ -280,6 +281,7 @@ elseif strcmp(selected_wave_axes,'Smoothed, rectified')
   if ~isfield(handles.internal,'filter_prop')
     [handles.internal.filter_prop.b handles.internal.filter_prop.a] = ...
       butter(6,30e3/(Fs/2),'high');
+    guidata(gcbo,handles);
   end
   b = handles.internal.filter_prop.b;
   a = handles.internal.filter_prop.a;
@@ -301,15 +303,13 @@ voc_t_indx=all_voc_times>=time_range(1)...
 disp_voc_times=all_voc_times(voc_t_indx);
 voc_nums=find(voc_t_indx);
 hold on;
-for k=1:length(disp_voc_times)
-  plot([disp_voc_times(k) disp_voc_times(k)],[a(3) a(4)],'color','r');
-end
+plot([disp_voc_times disp_voc_times]',[a(3) a(4)],'color','r');
 text(disp_voc_times,(a(4)-.1*(a(4)-a(3)))*ones(length(voc_nums),1),num2str(voc_nums),...
   'horizontalalignment','center');
 plot([voc_time voc_time],[a(3) a(4)],'color',[.6 .6 1]);
 hold off;
-text(disp_voc_times,zeros(length(disp_voc_times),1),...
-  'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
+% text(disp_voc_times,zeros(length(disp_voc_times),1),...
+%   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
 
 if isfield(handles.internal.extracted_sound_data,'d3_start')
   d3_start = handles.internal.extracted_sound_data.d3_start;
@@ -371,6 +371,7 @@ if get(handles.plot_spectrogram_checkbox,'value')
   end
   colormap('hot')
 end
+
 
 %plotting PI:
 axes(handles.PI_axes);cla;
@@ -581,8 +582,8 @@ handles.internal.changed=1;
 if handles.internal.current_voc > length(handles.internal.DataArray)
   handles.internal.current_voc=length(handles.internal.DataArray);
 end
-guidata(hObject, handles);
 update(handles);
+guidata(hObject, handles);
 
 
 % --- Executes on button press in new_button.
@@ -595,8 +596,8 @@ if x > voc_time - buffer && x < voc_time + buffer
   handles.internal.DataArray(end+1)=x;
   handles.internal.DataArray = sort(handles.internal.DataArray);
   handles.internal.changed=1;
-  guidata(hObject, handles);
   update(handles);
+  guidata(hObject, handles);
 else
   disp('Outside displayed range');
   add_text(handles,'Outside displayed range');
@@ -730,10 +731,12 @@ close_GUI(handles)
 
 function plot_spectrogram_checkbox_Callback(hObject, eventdata, handles)
 update(handles);
+guidata(hObject, handles);
 
 
 function plot_PI_checkbox_Callback(hObject, eventdata, handles)
 update(handles);
+guidata(hObject, handles);
 
 function previous_10_button_Callback(hObject, eventdata, handles)
 handles.internal.current_voc = handles.internal.current_voc - 10;
@@ -815,6 +818,7 @@ end
 
 function wave_axes_switch_Callback(hObject, eventdata, handles)
 update(handles);
+guidata(hObject, handles);
 
 function wave_axes_switch_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
