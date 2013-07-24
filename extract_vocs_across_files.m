@@ -2,7 +2,7 @@ clear;
 
 sound_data_dir = getpref('audioanalysischecker','sound_data_pname');
 
-bat_band='BK52';
+bat_band='OR44';
 % BK59 OR40 B52 B57 B53 OR44 P72 W50
 data_year=2008;
 
@@ -37,7 +37,7 @@ else
   trialcodes={};
 end
 
-for dd=1:length(audio_dir)-1
+for dd=1:length(audio_dir)
   
   pathname=[base_path wavebook_path audio_dir{dd}];
   % pathname=[base_path wavebook_path];
@@ -65,7 +65,11 @@ for dd=1:length(audio_dir)-1
     end
     linkaxes(hh,'x');
     options.WindowStyle='normal';
-    channel = inputdlg('Which channel?','',1,{''},options);
+    if size(waveforms,2)>1
+      channel = inputdlg('Which channel?','',1,{''},options);
+    else
+      channel = {'1'};
+    end
     %     close(1);
     
     if ~isempty(channel)

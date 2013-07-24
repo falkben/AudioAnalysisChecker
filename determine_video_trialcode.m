@@ -17,8 +17,13 @@ if strcmp(ext,'.bin')
   correct_k=find(~cellfun(@isempty,matches),1,'last');
   last_match = matches{correct_k};
 %   matches = strcmp(data_sheet(:,4),pathstr(colons(1)+1:slashes(k-1)));
-  row_match = strcmp(data_sheet(last_match,5),...
-    pathstr(slashes(correct_k)+1:slashes(correct_k+1)));
+  if correct_k < length(slashes)
+    row_match = strcmp(data_sheet(last_match,5),...
+      pathstr(slashes(correct_k)+1:slashes(correct_k+1)));
+  else
+    row_match = strcmp(data_sheet(last_match,5),...
+      [pathstr(slashes(correct_k)+1:end) '\']);
+  end
   bat = data_sheet{last_match(row_match),1};
   if strcmp(name([5 6]),'00')
     name([5 6])='08';
