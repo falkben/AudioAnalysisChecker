@@ -222,6 +222,12 @@ end
 all_trialcodes={extracted_sound_data.trialcode};
 trialcode = determine_video_trialcode([handles.internal.audio_pname ...
   handles.internal.audio_fname]);
+if trialcode==0
+  display_text = ['video trial not found: ' handles.internal.audio_fname];
+  disp(display_text)
+  add_text(handles,display_text);
+  trialcode=handles.internal.audio_fname(1:end-4);
+end
 indx=find(strcmp(all_trialcodes,trialcode));
 
 if isempty(indx)
@@ -235,6 +241,17 @@ end
 if isfield(extracted_sound_data(indx),'net_crossings')
   handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
 end
+
+if length(indx)>1
+  options.WindowStyle='normal';
+  channel = inputdlg('Which channel?','',1,{''},options);
+  if ~isempty(channel)
+    ch=str2double(channel);
+  end
+  [~,ia]=intersect([extracted_sound_data(indx).ch],ch);
+  indx=indx(ia);
+end
+
 handles.internal.DataArray = extracted_sound_data(indx).voc_t;
 handles.internal.extracted_sound_data = extracted_sound_data(indx);
 if isfield(handles.internal.extracted_sound_data,'ch')
@@ -311,7 +328,8 @@ hold off;
 % text(disp_voc_times,zeros(length(disp_voc_times),1),...
 %   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
 
-if isfield(handles.internal.extracted_sound_data,'d3_start')
+if isfield(handles.internal.extracted_sound_data,'d3_start') && ...
+  ~isempty(handles.internal.extracted_sound_data.d3_start)
   d3_start = handles.internal.extracted_sound_data.d3_start;
   d3_end = handles.internal.extracted_sound_data.d3_end;
   if a(1)<d3_start && a(2) > d3_start
@@ -402,7 +420,8 @@ if isfield(handles.internal,'net_crossings')
   plot((handles.internal.net_crossings(2)+1)*ones(2,1),[0 a(4)],'g','linewidth',2);
 end
 
-if isfield(handles.internal.extracted_sound_data,'d3_start')
+if isfield(handles.internal.extracted_sound_data,'d3_start') && ...
+    ~isempty(handles.internal.extracted_sound_data.d3_start)
   d3_start = handles.internal.extracted_sound_data.d3_start;
   d3_end = handles.internal.extracted_sound_data.d3_end;
   plot([d3_start d3_start],a(3:4),'g','linewidth',2);

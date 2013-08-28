@@ -1,6 +1,10 @@
 clear;
 
-sound_data_dir = getpref('audioanalysischecker','sound_data_pname');
+if ispref('audioanalysischecker') && ispref('audioanalysischecker','sound_data_pname')
+    sound_data_dir = getpref('audioanalysischecker','sound_data_pname');
+else
+    sound_data_dir = '';
+end
 
 bat_band='OR44';
 % BK59 OR40 B52 B57 B53 OR44 P72 W50

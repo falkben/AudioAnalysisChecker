@@ -3,6 +3,9 @@ function trialcode = determine_video_trialcode(fname)
 trialcode=0;
 
 [pathstr, name, ext] = fileparts(fname);
+if ~exist([getpref('audioanalysischecker','sound_data_pname') 'data_sheet.mat'],'file')
+  return
+end
 load([getpref('audioanalysischecker','sound_data_pname') 'data_sheet.mat']);
 
 if strcmp(ext,'.bin')
