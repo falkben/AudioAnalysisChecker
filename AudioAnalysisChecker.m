@@ -111,8 +111,8 @@ if ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArray)
   return;
 end
 
-if isfield(handles.internal.extracted_sound_data,'ch')
-  ch=handles.internal.extracted_sound_data.ch;
+if isfield(handles.internal,'ch')
+  ch=handles.internal.ch;
 else
   ch=1;
 end
@@ -487,7 +487,16 @@ end
 trial_data.voc_checked=1;
 trial_data.voc_checked_time=datevec(now);
 
-[fn pn]=gen_processed_fname(handles);
+[fn, pn]=gen_processed_fname(handles);
+%if the previous processed_file has a different processed channel, don't
+%overwrite it but add it to the trial data
+if exist([pn fn],'file')
+  prev_file=load([pn fn]);
+  if prev_file.trial_data.ch ~= trial_data.ch
+    trial_data.voc_t = {prev_file.trial_data.voc_t; trial_data.voc_t};
+    trial_data.ch = [prev_file.trial_data.ch; trial_data.ch];
+  end
+end
 save([pn fn],'trial_data');
 handles.internal.changed = 0;
 display_text = ['Saved ' handles.internal.audio_fname ' at ' datestr(now,'HH:MM PM')];
@@ -517,7 +526,11 @@ function close_GUI(handles)
 if save_before_discard(handles)
   return
 end
-delete(handles.figure1);
+if isfield(handles,'figure1');
+  delete(handles.figure1);
+else
+  delete(gcf);
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
