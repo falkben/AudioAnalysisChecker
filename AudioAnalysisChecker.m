@@ -76,8 +76,7 @@ if ispref('audioanalysischecker','sound_data_pname')
   set(handles.clear_sound_data_path_pushbutton,'Enable','On');
 end
 
-
-function handles=load_audio(handles,pathname,filename)
+function handles=load_file(handles,pathname,filename)
 if nargin == 1
   if isfield(handles.internal,'audio_pname') && ...
       exist(handles.internal.audio_pname,'dir')
@@ -94,7 +93,7 @@ if nargin == 1
     setpref('audioanalysischecker','audio_pname',pathname);
   end
 
-  [filename pathname]=uigetfile({'*.mat;*.bin'},...
+  [filename, pathname]=uigetfile({'*.mat;*.bin'},...
     'Load audio file',[pathname '\']);
   if isequal(filename,0)
     return
@@ -104,42 +103,14 @@ setpref('audioanalysischecker','audio_pname',pathname);
 
 handles.internal.audio_pname=pathname;
 handles.internal.audio_fname=filename;
+handles=load_waveform(handles);
 
 handles = load_marked_vocs(handles);
-
 if ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArray)
   return;
 end
 
-if isfield(handles.internal,'ch')
-  ch=handles.internal.ch;
-else
-  ch=1;
-end
-
-%determine which file it is from the marked filename
-if strcmp(filename(end-2:end),'mat') %loading from nidaq_matlab_tools
-  warning('off','MATLAB:loadobj');
-  audio=open([pathname '\' filename]);
-  warning('on','MATLAB:loadobj');
-  waveforms = audio.data;
-  Fs = audio.SR;
-  length_t = audio.pretrigger;
-  waveform = waveforms(:,ch);
-  handles.internal.waveform_y_range = [-10 10];
-elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
-  [fd,h,c] = OpenIoTechBinFile([pathname '\' filename]);
-  Fs = h.preFreq;
-  length_t=h.PreCount/Fs;
-  waveforms = ReadChnlsFromFile(fd,h,c,length_t*Fs,1);
-  waveform = waveforms{ch};
-  handles.internal.waveform_y_range = [-5 5];
-end
-
-handles.internal.waveform=waveform;
-handles.internal.Fs=Fs;
-handles.internal.length_t = length_t;
-handles.internal.ch=ch;
+handles.internal.waveform=handles.internal.waveforms(:,handles.internal.ch);
 
 handles.internal.current_voc=1;
 display_text = ['Opened file: ' handles.internal.audio_fname];
@@ -153,51 +124,101 @@ set(handles.wave_axes_switch,'enable','on');
 update(handles);
 guidata(gcbo, handles);
 
+function handles=load_waveform(handles)
+pathname=handles.internal.audio_pname;
+filename=handles.internal.audio_fname;
+%determine which file it is from the filename
+if strcmp(filename(end-2:end),'mat') %loading from nidaq_matlab_tools
+  warning('off','MATLAB:loadobj');
+  audio=open([pathname '\' filename]);
+  warning('on','MATLAB:loadobj');
+  waveforms = audio.data;
+  Fs = audio.SR;
+  length_t = audio.pretrigger;
+%   waveform = waveforms(:,ch);
+  handles.internal.waveform_y_range = [-10 10];
+elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
+  [fd,h,c] = OpenIoTechBinFile([pathname '\' filename]);
+  Fs = h.preFreq;
+  length_t=h.PreCount/Fs;
+  waveforms = ReadChnlsFromFile(fd,h,c,length_t*Fs,1);
+  waveforms=cell2mat(waveforms);
+%   waveform = waveforms{ch};
+  handles.internal.waveform_y_range = [-5 5];
+end
+handles.internal.waveforms=waveforms;
+handles.internal.Fs=Fs;
+handles.internal.length_t = length_t;
+
 
 function handles = load_marked_vocs(handles)
-[fn pn] = gen_processed_fname(handles);
+[fn,pn] = gen_processed_fname(handles);
+handles = load_sound_data(handles);
+if isempty(handles.internal.DataArray)
+  return;
+end
 if exist([pn fn],'file')
   load([pn fn]);
-  if isfield(trial_data,'net_crossings')
-    handles.internal.net_crossings = (trial_data.net_crossings-length(trial_data.centroid))/300;
-  end
-  handles.internal.DataArray = trial_data.voc_t;
-  handles.internal.extracted_sound_data = trial_data;
-  set(handles.processed_checkbox,'value',1);
-  display_text = 'Processed file found';
-  disp(display_text)
-  add_text(handles,display_text);
-else
-  if ispref('audioanalysischecker','sound_data_pname')
-    DEFAULTNAME=getpref('audioanalysischecker','sound_data_pname');
-  else
-    DEFAULTNAME='';
-  end
-
-  if exist([DEFAULTNAME 'sound_data.mat'],'file')
-    handles = load_sound_data_mat(handles,DEFAULTNAME);
-  else
-    [~, sound_data_pname] = uigetfile('sound_data.mat',...
-      'Select sound_data.mat (pre-processed data for multiple files), cancel if not preprocessed',DEFAULTNAME);
-    if ~isequal(sound_data_pname,0)
-      setpref('audioanalysischecker','sound_data_pname',sound_data_pname);
-      set_sound_data_path(handles);
-      handles = load_sound_data_mat(handles,sound_data_pname);
+  ii=ismember(trial_data.ch,handles.internal.ch);
+  if find(ii,1)
+    if ~iscell(trial_data.voc_t)
+      handles.internal.DataArray = trial_data.voc_t;
     else
-      % dialog box to ask if you want to generate processed file
-      button = questdlg('Generate a pre-processed file?','Preprocess sound data?');
-      switch button
-        case 'Cancel'
-          return
-        case 'OK'
-          %preprocess sound data
+      handles.internal.DataArray = trial_data.voc_t{ii};
+    end
+    handles.internal.extracted_sound_data = trial_data;
+
+    if isfield(trial_data,'net_crossings')
+      handles.internal.net_crossings = (trial_data.net_crossings-length(trial_data.centroid))/300;
+    end
+
+    set(handles.processed_checkbox,'value',1);
+    display_text = 'Processed file found';
+    disp(display_text)
+    add_text(handles,display_text);
+  end
+end
+
+
+function handles = load_sound_data(handles)
+if ispref('audioanalysischecker','sound_data_pname')
+  DEFAULTNAME=getpref('audioanalysischecker','sound_data_pname');
+else
+  DEFAULTNAME='';
+end
+
+if exist([DEFAULTNAME 'sound_data.mat'],'file')
+  handles = load_sound_data_mat(handles,DEFAULTNAME);
+else
+  [~, sound_data_pname] = uigetfile('sound_data.mat',...
+    'Select sound_data.mat (pre-processed data for multiple files), cancel if not preprocessed',DEFAULTNAME);
+  if ~isequal(sound_data_pname,0)
+    setpref('audioanalysischecker','sound_data_pname',sound_data_pname);
+    set_sound_data_path(handles);
+    handles = load_sound_data_mat(handles,sound_data_pname);
+  else
+    % dialog box to ask if you want to generate processed file
+    button = questdlg('Generate a pre-processed file?','Preprocess sound data?');
+    switch button
+      case 'Cancel'
+        return
+      case 'OK'
+        %preprocess sound data
 %           locs=extract_vocs(handles.sound_data,SR,2.5,.006,1)
-        case 'No'
-          %load the audio data and display it
-          %load in other markings?
-      end
+      case 'No'
+        %load the audio data and display it
+        %load in other markings?
     end
   end
+end
+
+function ch=determine_channel(handles)
+ch=0;
+options.WindowStyle='normal';
+channel = inputdlg(['Which channel? (there are ' ...
+  num2str(size(handles.internal.waveforms,2)) ')' char(10) 'last channel might be trigger...'],'',1,{''},options);
+if ~isempty(channel)
+  ch=str2double(channel);
 end
 
 %loads pre processed data from multiple trials and extracts the current
@@ -206,7 +227,7 @@ function handles = load_sound_data_mat(handles,sound_data_pname)
 handles.sound_data_file = [sound_data_pname 'sound_data.mat'];
 %compare checksum to checksum in handles if it exists
 %saves time loading sound_data.mat if you're doing multiple trials
-[status result] = system(['md5\md5.exe ' handles.sound_data_file]);
+[status, result] = system(['md5\md5.exe ' '"' handles.sound_data_file '"']);
 if status == 0
   space_indx=strfind(result,' ');
   checksum = result(1:space_indx(1));
@@ -230,6 +251,15 @@ if trialcode==0
 end
 indx=find(strcmp(all_trialcodes,trialcode));
 
+if length(indx)>1
+  ch=determine_channel(handles);
+  if isequal(ch,0)
+    indx=[];
+  end
+  [~,ia]=intersect([extracted_sound_data(indx).ch],ch);
+  indx=indx(ia);
+end
+
 if isempty(indx)
   handles.internal.DataArray=[];
   display_text = ['trial: ' trialcode ' absent.'];
@@ -240,16 +270,6 @@ end
 
 if isfield(extracted_sound_data(indx),'net_crossings')
   handles.internal.net_crossings = (extracted_sound_data(indx).net_crossings-length(extracted_sound_data(indx).centroid))/300;
-end
-
-if length(indx)>1
-  options.WindowStyle='normal';
-  channel = inputdlg('Which channel?','',1,{''},options);
-  if ~isempty(channel)
-    ch=str2double(channel);
-  end
-  [~,ia]=intersect([extracted_sound_data(indx).ch],ch);
-  indx=indx(ia);
 end
 
 handles.internal.DataArray = extracted_sound_data(indx).voc_t;
@@ -468,6 +488,7 @@ end
 function save_trial(handles)
 trial_data=handles.internal.extracted_sound_data;
 trial_data.voc_t=handles.internal.DataArray;
+trial_data.ch=handles.internal.ch;
 
 %calculating emission times
 static = load_static(handles);
@@ -492,9 +513,16 @@ trial_data.voc_checked_time=datevec(now);
 %overwrite it but add it to the trial data
 if exist([pn fn],'file')
   prev_file=load([pn fn]);
-  if prev_file.trial_data.ch ~= trial_data.ch
-    trial_data.voc_t = {prev_file.trial_data.voc_t; trial_data.voc_t};
-    trial_data.ch = [prev_file.trial_data.ch; trial_data.ch];
+  ii=ismember(prev_file.trial_data.ch,trial_data.ch);
+  if length(ii) > 1 || isempty(find(ii,1))
+    if find(ii,1) %then the processed file has data from your channel, and we overwrite that channel
+      prev_file.trial_data.voc_t{ii}=trial_data.voc_t;
+      trial_data.ch=prev_file.trial_data.ch;
+      trial_data.voc_t=prev_file.trial_data.voc_t;
+    else %the processed file does not have data from your channel and you should add to it
+      trial_data.voc_t = {prev_file.trial_data.voc_t; trial_data.voc_t};
+      trial_data.ch = [prev_file.trial_data.ch; trial_data.ch];
+    end
   end
 end
 save([pn fn],'trial_data');
@@ -711,7 +739,7 @@ if save_before_discard(handles)
   return
 end
 handles=initialize(handles);
-handles=load_audio(handles);
+handles=load_file(handles);
 guidata(hObject, handles);
 
 % --------------------------------------------------------------------
@@ -748,7 +776,7 @@ i=find(~cellfun(@isempty,strfind(fnames,fname)),1);
 while ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArray)
   i=i+1;
   if i <= length(fnames)
-    handles=load_audio(handles,pname,fnames{i});
+    handles=load_file(handles,pname,fnames{i});
   else
     disp('Reached end');
     break
