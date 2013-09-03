@@ -27,19 +27,19 @@ function varargout = AudioAnalysisChecker(varargin)
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @AudioAnalysisChecker_OpeningFcn, ...
-                   'gui_OutputFcn',  @AudioAnalysisChecker_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+  'gui_Singleton',  gui_Singleton, ...
+  'gui_OpeningFcn', @AudioAnalysisChecker_OpeningFcn, ...
+  'gui_OutputFcn',  @AudioAnalysisChecker_OutputFcn, ...
+  'gui_LayoutFcn',  [] , ...
+  'gui_Callback',   []);
 if nargin && ischar(varargin{1})
-    gui_State.gui_Callback = str2func(varargin{1});
+  gui_State.gui_Callback = str2func(varargin{1});
 end
 
 if nargout
-    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+  [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
 else
-    gui_mainfcn(gui_State, varargin{:});
+  gui_mainfcn(gui_State, varargin{:});
 end
 % End initialization code - DO NOT EDIT
 
@@ -53,7 +53,7 @@ handles = initialize(handles);
 guidata(hObject, handles);
 
 
-function varargout = AudioAnalysisChecker_OutputFcn(hObject, eventdata, handles) 
+function varargout = AudioAnalysisChecker_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 
@@ -92,7 +92,7 @@ if nargin == 1
     end
     setpref('audioanalysischecker','audio_pname',pathname);
   end
-
+  
   [filename, pathname]=uigetfile({'*.mat;*.bin'},...
     'Load audio file',[pathname '\']);
   if isequal(filename,0)
@@ -135,7 +135,7 @@ if strcmp(filename(end-2:end),'mat') %loading from nidaq_matlab_tools
   waveforms = audio.data;
   Fs = audio.SR;
   length_t = audio.pretrigger;
-%   waveform = waveforms(:,ch);
+  %   waveform = waveforms(:,ch);
   handles.internal.waveform_y_range = [-10 10];
 elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
   [fd,h,c] = OpenIoTechBinFile([pathname '\' filename]);
@@ -143,7 +143,7 @@ elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
   length_t=h.PreCount/Fs;
   waveforms = ReadChnlsFromFile(fd,h,c,length_t*Fs,1);
   waveforms=cell2mat(waveforms);
-%   waveform = waveforms{ch};
+  %   waveform = waveforms{ch};
   handles.internal.waveform_y_range = [-5 5];
 end
 handles.internal.waveforms=waveforms;
@@ -153,12 +153,14 @@ handles.internal.length_t = length_t;
 
 function handles = load_marked_vocs(handles)
 [fn,pn] = gen_processed_fname(handles);
-handles = load_sound_data(handles);
-if isempty(handles.internal.DataArray)
-  return;
-end
 if exist([pn fn],'file')
   load([pn fn]);
+  set(handles.processed_checkbox,'value',1);
+  display_text = ['Processed file found. Channels processed: ' num2str(trial_data.ch')];
+  disp(display_text)
+  add_text(handles,display_text);
+  
+  handles.internal.ch=determine_channel(handles);
   ii=ismember(trial_data.ch,handles.internal.ch);
   if find(ii,1)
     if ~iscell(trial_data.voc_t)
@@ -167,15 +169,20 @@ if exist([pn fn],'file')
       handles.internal.DataArray = trial_data.voc_t{ii};
     end
     handles.internal.extracted_sound_data = trial_data;
-
+    
     if isfield(trial_data,'net_crossings')
       handles.internal.net_crossings = (trial_data.net_crossings-length(trial_data.centroid))/300;
     end
-
-    set(handles.processed_checkbox,'value',1);
-    display_text = 'Processed file found';
-    disp(display_text)
-    add_text(handles,display_text);
+  else
+    handles = load_sound_data(handles);
+    if isempty(handles.internal.DataArray)
+      return;
+    end
+  end
+else
+  handles = load_sound_data(handles);
+  if isempty(handles.internal.DataArray)
+    return;
   end
 end
 
@@ -204,7 +211,7 @@ else
         return
       case 'OK'
         %preprocess sound data
-%           locs=extract_vocs(handles.sound_data,SR,2.5,.006,1)
+        %           locs=extract_vocs(handles.sound_data,SR,2.5,.006,1)
       case 'No'
         %load the audio data and display it
         %load in other markings?
@@ -252,7 +259,11 @@ end
 indx=find(strcmp(all_trialcodes,trialcode));
 
 if length(indx)>1
-  ch=determine_channel(handles);
+  if ~isfield(handles.internal,'ch')
+    ch=determine_channel(handles);
+  else
+    ch=handles.internal.ch;
+  end
   if isequal(ch,0)
     indx=[];
   end
@@ -349,7 +360,7 @@ hold off;
 %   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
 
 if isfield(handles.internal.extracted_sound_data,'d3_start') && ...
-  ~isempty(handles.internal.extracted_sound_data.d3_start)
+    ~isempty(handles.internal.extracted_sound_data.d3_start)
   d3_start = handles.internal.extracted_sound_data.d3_start;
   d3_end = handles.internal.extracted_sound_data.d3_end;
   if a(1)<d3_start && a(2) > d3_start
@@ -393,7 +404,7 @@ if get(handles.plot_spectrogram_checkbox,'value')
   imagesc(T,F,10*log10(abs(P))); axis tight;
   set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
     num2str((0:25:125)'),'xticklabel','');
-
+  
   %worrying about the clim for the spectrogram:
   max_db_str=num2str(round(max(max(10*log10(P)))));
   min_db_str=num2str(round(min(min(10*log10(P)))));
@@ -589,7 +600,7 @@ guidata(hObject, handles);
 % --- Executes during object creation, after setting all properties.
 function sample_edit_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -668,7 +679,7 @@ function voc_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -685,7 +696,7 @@ function low_dB_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 % --- Executes on button press in lock_range_checkbox.
@@ -709,7 +720,7 @@ function top_dB_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -767,7 +778,7 @@ else
   ia_order = 1:length(ia);
   A=[ia_order', ia_order(ib)'];
   [~, index]=sortrows(A,[1 2]);
-  fnames = fnames_unsort(ia(index))';  
+  fnames = fnames_unsort(ia(index))';
 end
 
 handles=initialize(handles);
@@ -847,7 +858,7 @@ close_GUI(handles);
 
 function text_output_listbox_Callback(hObject, eventdata, handles)
 
-  
+
 
 
 function playback_slowdown_factor_Callback(hObject, eventdata, handles)
@@ -872,7 +883,7 @@ function playback_slowdown_factor_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -882,7 +893,7 @@ guidata(hObject, handles);
 
 function wave_axes_switch_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -905,7 +916,7 @@ function sound_data_path_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
