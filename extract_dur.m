@@ -1,4 +1,8 @@
-function [onsets, offsets, voc_t, I] = extract_dur(waveform,Fs,voc_t,trial_start,trial_end,pretrig_t,b2mD,manual,DIAG)
+function [onsets, offsets, voc_t, I] = extract_dur(waveform,Fs,ch_voc_t,trial_start,trial_end,pretrig_t,b2mD,manual,DIAG)
+
+voc_t = ch_voc_t;
+
+
 %remove extraneous sounds below 12k
 [b,a] = butter(6,12e3/(Fs/2),'high');
 ddf=filtfilt(b,a,waveform);
@@ -43,9 +47,9 @@ voc_samps = round((voc_t+pretrig_t).*Fs);
 buff_past = .0055*Fs;
 buff_forw = .007*Fs;
 
-if ~manual && ...
-    exist('..\duration_threshold_fit.mat','file')
-  load('..\duration_threshold_fit.mat');
+if isempty(manual) && ...
+    exist('duration_threshold_fit.mat','file')
+  load('duration_threshold_fit.mat');
 end
 
 onsets=nan(length(voc_t),1);
@@ -54,8 +58,8 @@ I=nan(length(voc_t),1);
 pk=nan(length(voc_t),1);
 thresh1=nan(length(voc_t),1);
 thresh2=nan(length(voc_t),1);
-for k=1:length(voc_samps)
-  voc_samp = voc_samps(k);
+for j=1:length(voc_samps)
+  voc_samp = voc_samps(j);
   first_frame=max(1,voc_samp - buff_past);
   last_frame=min(voc_samp + buff_forw,length(ddf));
   voc = ddf(first_frame:last_frame);
@@ -66,30 +70,30 @@ for k=1:length(voc_samps)
   smooth_der_voc_low=data_square_diff_low(first_frame + 1:min(last_frame,length(data_square_diff_high)));
   
   %1 ms before and after voc_t, look for maximum...
-  [pk(k),loc]=max(data_square_voc( max(1,buff_past - .001*Fs):...
+  [pk(j),loc]=max(data_square_voc( max(1,buff_past - .001*Fs):...
     min(length(data_square_voc),buff_past-.001*Fs) + .001*Fs));
   loc = loc + buff_past - .001*Fs;
   
   %no idea if this equation is correct...
-  I(k) = 20*log10(sqrt(pk(k))) + lvl_diff(k);
+  I(j) = 20*log10(sqrt(pk(j))) + lvl_diff(j);
   
   voc_s=nan; voc_e=nan;
   
   thresh_mean_indx = -4:-1;
-  thresh_mean_indx=thresh_mean_indx(k-4:k-1 >= 1);
-  if k > 1
-    thresh1(k)=nanmean([.9*polyval(pk_vs_thresh1.coeff,pk(k));...
-      thresh1(k+thresh_mean_indx)]);
-    thresh2(k)=nanmean([.9*polyval(pk_vs_thresh2.coeff,pk(k));...
-      thresh1(k+thresh_mean_indx)]);
+  thresh_mean_indx=thresh_mean_indx(j-4:j-1 >= 1);
+  if j > 1
+    thresh1(j)=nanmean([.9*polyval(pk_vs_thresh1.coeff,pk(j));...
+      thresh1(j+thresh_mean_indx)]);
+    thresh2(j)=nanmean([.9*polyval(pk_vs_thresh2.coeff,pk(j));...
+      thresh1(j+thresh_mean_indx)]);
   else
-    thresh1(k)=.9*polyval(pk_vs_thresh1.coeff,pk(k));
-    thresh2(k)=.9*polyval(pk_vs_thresh2.coeff,pk(k));
+    thresh1(j)=.9*polyval(pk_vs_thresh1.coeff,pk(j));
+    thresh2(j)=.9*polyval(pk_vs_thresh2.coeff,pk(j));
   end
   thresh_high_noise = noise_diff_high*10;
   thresh_low_noise = noise_diff_low*10;
   
-  if DIAG || manual
+  if ~isempty(DIAG) || ~isempty(manual)
     figure(1); clf;
     
     hh(1)=subplot(3,1,1); cla;
@@ -113,9 +117,9 @@ for k=1:length(voc_samps)
     plot((loc:length(data_square_low_voc))./Fs,data_square_low_voc(loc:end)...
       ./Mlow);
     th1_a=plot([0,length(data_square_high_voc)/2]./Fs,...
-      [thresh1(k)./Mhigh thresh1(k)./Mhigh],'g');
+      [thresh1(j)./Mhigh thresh1(j)./Mhigh],'g');
     th2_a=plot([length(data_square_low_voc)/2,length(data_square_low_voc)]./Fs,...
-      [thresh2(k)./Mlow thresh2(k)./Mlow],'g');
+      [thresh2(j)./Mlow thresh2(j)./Mlow],'g');
     axis tight;
     
     linkaxes(hh,'x');
@@ -135,16 +139,16 @@ for k=1:length(voc_samps)
       [Mdiffhigh Mdiffhigh Mdifflow Mdifflow],'g');
   end
   
-  if ~manual && pk(k) > .005
-    [voc_s,thresh1(k), thresh_high_noise]=...
+  if isempty(manual) && pk(j) > .005
+    [voc_s,thresh1(j), thresh_high_noise]=...
       find_thresh_crossing(data_square_high_voc(1:loc),...
-      thresh1(k),0,'last',smooth_der_voc_high,thresh_high_noise);
-    [voc_e,thresh2(k), thresh_low_noise]=...
+      thresh1(j),0,'last',smooth_der_voc_high,thresh_high_noise);
+    [voc_e,thresh2(j), thresh_low_noise]=...
       find_thresh_crossing(data_square_low_voc(loc:end),...
-      thresh2(k),loc,'first',smooth_der_voc_low,thresh_low_noise);
+      thresh2(j),loc,'first',smooth_der_voc_low,thresh_low_noise);
   end
   
-  if DIAG || manual    
+  if ~isempty(DIAG) || ~isempty(manual)    
     figure(1);
     axes(hh(1));
     hold on;
@@ -168,9 +172,9 @@ for k=1:length(voc_samps)
       [0 1],'r');
     delete([th1_a th2_a]);
     plot([0,length(data_square_high_voc)/2]./Fs,...
-      [thresh1(k)./Mhigh thresh1(k)./Mhigh],'g');
+      [thresh1(j)./Mhigh thresh1(j)./Mhigh],'g');
     plot([length(data_square_low_voc)/2,length(data_square_low_voc)]./Fs,...
-      [thresh2(k)./Mlow thresh2(k)./Mlow],'g');
+      [thresh2(j)./Mlow thresh2(j)./Mlow],'g');
     axis tight;
     
     Mdiffhigh=max(smooth_der_voc_high(1:loc));
@@ -217,7 +221,7 @@ for k=1:length(voc_samps)
     %     figure(6); clf;
     %     scatter(I,offsets-onsets);
     
-    if manual
+    if ~isempty(manual)
       disp('mark start and stop of vocalization')
       axes(hh(3));
       [x]=ginput(2);
@@ -226,14 +230,14 @@ for k=1:length(voc_samps)
         x=ginput(2);
       end
       voc_s = x(1)*Fs;
-      thresh1(k)=data_square_high_voc(x(1));
+      thresh1(j)=data_square_high_voc(x(1));
       voc_e = x(2)*Fs;
-      thresh2(k)=data_square_low_voc(x(2));
+      thresh2(j)=data_square_low_voc(x(2));
     end
   end
   
-  onsets(k)=(voc_s + voc_samp - buff_past)/Fs - pretrig_t;
-  offsets(k)=(voc_e + voc_samp - buff_past)/Fs - pretrig_t;
+  onsets(j)=(voc_s + voc_samp - buff_past)/Fs - pretrig_t;
+  offsets(j)=(voc_e + voc_samp - buff_past)/Fs - pretrig_t;
 end
 
 
