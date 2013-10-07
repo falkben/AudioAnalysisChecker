@@ -771,14 +771,15 @@ if isempty(fnames_unsort)
   all_files=dir([pname '*.bin']);
   fnames={all_files.name};
 else
-  fname_dates = cellfun(@(f) datenum(f(1:11),'dd-mmm-yyyy'),fnames_unsort);
-  [~, ia] = sort(fname_dates);
-  fname_tcodes = cellfun(@(f) str2double(f(13:14)),fnames_unsort);
-  [~, ib] = sort(fname_tcodes);
-  ia_order = 1:length(ia);
-  A=[ia_order', ia_order(ib)'];
-  [~, index]=sortrows(A,[1 2]);
-  fnames = fnames_unsort(ia(index))';
+%   fname_dates = cellfun(@(f) datenum(f(1:10),'yyyy.mm.dd'),fnames_unsort);
+%   [~, ia] = sort(fname_dates);
+%   fname_tcodes = cellfun(@(f) str2double(f(12:end-3)),fnames_unsort);
+%   [~, ib] = sort(fname_tcodes);
+%   ia_order = 1:length(ia);
+%   A=[ia_order', ia_order(ib)'];
+%   [~, index]=sortrows(A,[1 2]);
+%   fnames = fnames_unsort(ia(index))';
+  fnames=fnames_unsort;
 end
 
 handles=initialize(handles);
