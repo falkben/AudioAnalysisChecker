@@ -1,7 +1,6 @@
-function [onsets, offsets, voc_t, I] = extract_dur(waveform,Fs,ch_voc_t,trial_start,trial_end,pretrig_t,b2mD,manual,DIAG)
+function [onsets, offsets, voc_t, I] = extract_dur(waveform,Fs,voc_t,trial_start,trial_end,pretrig_t,b2mD,manual,DIAG)
 
-voc_t = ch_voc_t;
-
+I=[];
 
 %remove extraneous sounds below 12k
 [b,a] = butter(6,12e3/(Fs/2),'high');
@@ -40,8 +39,10 @@ used_vocs = voc_t > trial_start & voc_t < trial_end & [1; diff(voc_t)>10e-3];
 voc_t=voc_t(used_vocs);
 %it's possible that you don't have a bat position for each vocalization
 %even after this if you have more than one d3 trial or some ignore segments
-b2mD=b2mD(used_vocs);
-lvl_diff = 20*log10(b2mD/.1);
+if ~isempty(b2mD)
+  b2mD=b2mD(used_vocs);
+  lvl_diff = 20*log10(b2mD/.1);
+end
 
 voc_samps = round((voc_t+pretrig_t).*Fs);
 buff_past = .0055*Fs;
@@ -75,7 +76,9 @@ for j=1:length(voc_samps)
   loc = loc + buff_past - .001*Fs;
   
   %no idea if this equation is correct...
-  I(j) = 20*log10(sqrt(pk(j))) + lvl_diff(j);
+  if ~isempty(b2mD)
+    I(j) = 20*log10(sqrt(pk(j))) + lvl_diff(j);
+  end
   
   voc_s=nan; voc_e=nan;
   
