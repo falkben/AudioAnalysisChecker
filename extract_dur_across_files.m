@@ -1,26 +1,46 @@
 clear
 
-warning off
+warning('off','MATLAB:loadobj');
 
 % default_proc_folder is the folder where the processed files are
-default_proc_folder = 'E:\Data Stage USA\Floor_mics\Base_line_data_Empty_room\R14\';
+% default_proc_folder = 'E:\Data Stage USA\Floor_mics\Base_line_data_Empty_room\R14\';
+if ispref('audioanalysischecker') && ispref('audioanalysischecker','audio_pname')...
+    && exist(getpref('audioanalysischecker','audio_pname'),'dir')
+  d3_default_folder=getpref('audioanalysischecker','audio_pname');
+else
+  d3_default_folder=[];
+end
+proc_folder=uigetdir(d3_default_folder,...
+  'Select the folder for the _processed.mat audio files');
+if isequal(proc_folder,0)
+  return;
+end
+
 
 % this is the folder where the analysed c3d files are
-d3_default_folder='E:\Data Stage USA\analysed_c3d\';
+% d3_default_folder='E:\Data Stage USA\analysed_c3d\';
+if ispref('audioanalysischecker') && ispref('audioanalysischecker','d3_pname')...
+    && exist(getpref('audioanalysischecker','d3_pname'),'dir')
+  d3_default_folder=getpref('audioanalysischecker','d3_pname');
+else
+  d3_default_folder=[];
+end
+d3_folder=uigetdir(d3_default_folder,...
+  'Select the folder where the d3_analysed files');
+if isequal(d3_folder,0)
+  return;
+else
+  setpref('audioanalysischecker','d3_pname',d3_folder);
+end
 
 
-proc_folder = [uigetdir(default_proc_folder,...
-    ['Select the folder where the processed.mat files are. Current folder is ' default_proc_folder]) '\'];
 
-processed_audio_files=dir([proc_folder '*_processed.mat']);
-processed_duration_files=dir([proc_folder '*_processed_duration.mat']);
+processed_audio_files=dir([proc_folder '\*processed.mat']);
+processed_duration_files=dir([proc_folder '\*_processed_duration.mat']);
 processed_audio_fnames={processed_audio_files.name};
 processed_duration_fnames={processed_duration_files.name};
 
-d3_folder=[uigetdir(d3_default_folder,...
-    ['Select the folder where the d3_analysed files are, current folder is ' d3_default_folder]) '\'];
-
-d3_files = dir([d3_folder '*.mat']);
+d3_files = dir([d3_folder '\*.mat']);
 
 
 for k=3:length(processed_audio_files)
@@ -152,4 +172,5 @@ for k=3:length(processed_audio_files)
 end
 
 disp('All files completed');
+warning('on','MATLAB:loadobj');
 % end
