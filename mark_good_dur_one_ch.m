@@ -1,6 +1,9 @@
-function mark_good_dur_one_ch(processed_audio_dir,trial_data,audio,Fs,pretrig_t,processed_audio_fnames,proc_fname_indx)
+function mark_good_dur_one_ch(processed_audio_dir,trial_data,audio,Fs,pretrig_t,duration_fname)
 
 waveform = audio.data(:,trial_data.ch);
+
+ff=figure(1);
+set(ff,'position',[50 50 550 700])
 
 if ~isfield(trial_data,'duration_data_audit')
   
@@ -17,9 +20,8 @@ if ~isfield(trial_data,'duration_data_audit')
     buffer_e = round((2e-3).*Fs);
     samp_s = round((voc_s + pretrig_t).*Fs);
     samp_e = round((voc_e + pretrig_t).*Fs);
-%     voc = waveform(max(1,samp_s):samp_e);
     
-    clf;
+    clf(ff);
     
     hh(1)=subplot(2,1,1); cla;
     voc_p = waveform(max(1,samp_s-buffer_s):min(samp_e+buffer_e,length(waveform)));
@@ -63,8 +65,7 @@ if ~isfield(trial_data,'duration_data_audit')
         new_duration_data(vv_indx(vv),2:3)=nan;
         vv=vv+1;
       case 27 %ESC
-        disp(['On voc: ' num2str(vv_indx(vv)) ' file ' num2str(k) ...
-          ' dir ' num2str(dd)]);
+        disp(['On voc: ' num2str(vv_indx(vv))]);
         return;
       case 28 %going backwards
         vv=vv-1;
@@ -78,7 +79,7 @@ if ~isfield(trial_data,'duration_data_audit')
         vv=vv-2;
       elseif ~isequal(reply, 27)
         trial_data.duration_data_audit = new_duration_data;
-        save([processed_audio_dir processed_audio_fnames{proc_fname_indx}],'trial_data');
+        save([processed_audio_dir '\' duration_fname],'trial_data');
       end
     end
   end

@@ -70,10 +70,11 @@ for k=1:length(processed_audio_fnames)
       
       if isfield(d3_analysed,'ignore_segs')
         full_indx=round(trial_data.d3_start*d3_analysed.fvideo):round(trial_data.d3_end*d3_analysed.fvideo);
-        sub_indx = setdiff(full_indx,d3_analysed.ignore_segs+d3_analysed.startframe-1);
+        full_indx(d3_analysed.ignore_segs)=[];
+%         sub_indx = setdiff(full_indx,d3_analysed.ignore_segs+d3_analysed.startframe-1);
         
-        trial_data.d3_start = sub_indx(1)/d3_analysed.fvideo;
-        trial_data.d3_end = sub_indx(end)/d3_analysed.fvideo;
+        trial_data.d3_start = full_indx(1)/d3_analysed.fvideo;
+        trial_data.d3_end = (full_indx(end))/d3_analysed.fvideo;
       end
       
       if isempty(trial_data.d3_start)||isempty(trial_data.d3_end)
@@ -104,8 +105,7 @@ for k=1:length(processed_audio_fnames)
         save([processed_audio_dir '\'...
           processed_audio_fnames{k}(1:end-4) '_duration.mat'],...
           'trial_data')
-        disp(['File saved : ' processed_audio_fnames{k}(1:end-4) '_duration.mat']);
-        
+        disp(['File (' sprintf('%u%s%u',k,' of ',length(processed_audio_fnames)) ') saved: ' processed_audio_fnames{k}(1:end-4) '_duration.mat']);
       end
     end
   else

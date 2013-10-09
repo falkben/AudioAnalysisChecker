@@ -85,7 +85,7 @@ for kk=1:length(trial_data.voc_t)
         vv=vv-2;
       elseif ~isequal(reply, 27)
         trial_data.duration_data_audit{kk} = new_duration_data;
-        save([processed_audio_dir processed_audio_fnames{proc_fname_indx}],'trial_data');
+        save([processed_audio_dir '\' processed_audio_fnames{proc_fname_indx}],'trial_data');
       end
     end
   end

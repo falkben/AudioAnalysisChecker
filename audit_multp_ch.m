@@ -50,7 +50,7 @@ if isfield(trial_data,'duration_data_audit')
     end
     trial_data.duration_data_audit{kk}(~audit_vocs,:) = new_duration_data;
     trial_data.manual_additions = 1;
-    save([processed_audio_dir processed_audio_fnames{proc_fname_indx}],'trial_data');
+    save([processed_audio_dir '\' processed_audio_fnames{proc_fname_indx}],'trial_data');
   end
 end
 end

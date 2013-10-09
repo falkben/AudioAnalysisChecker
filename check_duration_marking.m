@@ -38,9 +38,17 @@ for k=1:length(audio_fnames)
     pretrig_t = audio.pretrigger;
     
     if iscell(trial_data.voc_t)
-      mark_good_dur_mtlp_ch(processed_audio_dir,trial_data,audio,Fs,pretrig_t,processed_audio_fnames,dur_fname_indx)
+      mark_good_dur_mtlp_ch(processed_audio_dir,trial_data,audio,Fs,pretrig_t,...
+        duration_fnames,dur_fname_indx)
     else
-      mark_good_dur_one_ch(processed_audio_dir,trial_data,audio,Fs,pretrig_t,processed_audio_fnames,dur_fname_indx)
+      mark_good_dur_one_ch(processed_audio_dir,trial_data,audio,Fs,pretrig_t,...
+        duration_fnames{dur_fname_indx})
+    end
+    disp(['Finished file ' num2str(k) ' of ' num2str(length(audio_fnames))]);
+    disp('Continue? Press ESC to cancel, any other key to continue')
+    reply = getkey;
+    if isequal(reply, 27)
+      break;
     end
   end
 end

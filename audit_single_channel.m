@@ -1,9 +1,9 @@
-function audit_single_channel(audio_fn,trial_data,processed_audio_dir,processed_audio_fnames,proc_fname_indx)
+function audit_single_channel(audio,trial_data,processed_audio_dir,dur_fname)
+
+ff=figure(1);
+set(ff,'position',[50 50 550 700])
 
 if isfield(trial_data,'duration_data_audit')
-  
-  load([processed_audio_dir processed_audio_fnames{proc_fname_indx}])
-  audio= load([processed_audio_dir audio_fn]);
   Fs = audio.SR;
   pretrig_t = audio.pretrigger;
   waveform = audio.data(:,trial_data.ch);
@@ -16,7 +16,7 @@ if isfield(trial_data,'duration_data_audit')
   new_duration_data = nan(length(remaining_vocs_indx),3);
   for vv=1:length(remaining_vocs_indx)
     
-    disp(['On voc #' num2str(vv) ' on ' num2str(length(remaining_vocs_indx)) ' vocs.']);
+    disp(['On voc #' num2str(vv) ' of ' num2str(length(remaining_vocs_indx)) ' vocs.']);
     
     buffer_s = round((10e-3).*Fs);
     buffer_e = round((14e-3).*Fs);
@@ -24,7 +24,7 @@ if isfield(trial_data,'duration_data_audit')
     voc_samp = round((voc_time + pretrig_t)*Fs);
     voc=waveform(max(1,voc_samp-buffer_s):min(voc_samp+buffer_e,length(waveform)));
     
-    clf;
+    clf(ff);
     
     hh(1)=subplot(2,1,1); cla;
     plot((1:length(voc))./Fs,voc);
@@ -57,6 +57,5 @@ if isfield(trial_data,'duration_data_audit')
   end
   trial_data.duration_data_audit(~audit_vocs,:) = new_duration_data;
   trial_data.manual_additions = 1;
-  save([processed_audio_dir processed_audio_fnames{proc_fname_indx}],'trial_data');
-end
+  save([processed_audio_dir '\' dur_fname],'trial_data');
 end
