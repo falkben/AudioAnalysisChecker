@@ -1,60 +1,54 @@
 clear;
 
-warning off;
+warning('off','MATLAB:loadobj');
 
-default_proc_folder = 'E:\Data Stage USA\Floor_mics\Base_line_data_Empty_room\R14\';
-processed_audio_dir= [uigetdir(default_proc_folder,...
-  ['Select the folder where the processed audio files are. The current folder is' default_proc_folder]) '\'];
+% default_proc_folder = 'E:\Data Stage USA\Floor_mics\Base_line_data_Empty_room\R14\';
+if ispref('audioanalysischecker') && ispref('audioanalysischecker','audio_pname')...
+    && exist(getpref('audioanalysischecker','audio_pname'),'dir')
+  default_proc_folder=getpref('audioanalysischecker','audio_pname');
+else
+  default_proc_folder=[];
+end
+processed_audio_dir=uigetdir(default_proc_folder,...
+  'Select the folder for the _processed.mat audio files');
+if isequal(processed_audio_dir,0)
+  return;
+else
+  setpref('audioanalysischecker','audio_pname',processed_audio_dir);
+end
 
-processed_audio_files=dir([processed_audio_dir '*_duration.mat']);
+processed_duration_files=dir([processed_audio_dir '\*_duration.mat']);
+duration_fnames={processed_duration_files.name};
+
+processed_audio_files=dir([processed_audio_dir '\*_processed.mat']);
 processed_audio_fnames={processed_audio_files.name};
 
-files = length(dir([processed_audio_dir '*.mat']));
-fnames=dir([processed_audio_dir '*.mat']);
-audio_files_indx=[];
-audio_files={};
+files=dir([processed_audio_dir '\*.mat']);
+audio_fnames = setdiff({files.name},[processed_audio_fnames; duration_fnames]);
 
-for ii = 1 : files
-  h=strfind(fnames(ii).name,'_processed');
-  if isempty(h)
-    audio_files_indx(end+1)=ii;
-  end
-end
-
-for jj=1:length(audio_files_indx)
-  
-  audio_files{end+1} = fnames(audio_files_indx(jj));
-  
-end
-
-
-for k=1:length(audio_files)
-  audio_fn = audio_files{k}.name;
-  proc_fname_indx = find(~cellfun(@isempty,strfind(processed_audio_fnames,...
+for k=1:length(audio_fnames)
+  audio_fn = audio_fnames{k};
+  proc_fname_indx = find(~cellfun(@isempty,strfind(duration_fnames,...
     audio_fn(1:end-4))));
   if ~isempty(proc_fname_indx)
-    load([processed_audio_dir processed_audio_fnames{proc_fname_indx}])
+    load([processed_audio_dir '\' duration_fnames{proc_fname_indx}])
     
-    audio= load([processed_audio_dir audio_fn]);
+    audio= load([processed_audio_dir '\' audio_fn]);
     Fs = audio.SR;
     pretrig_t = audio.pretrigger;
-    manual= [];
-    DIAG=[];
     
     if (~isfield(trial_data,'manual_additions')...
         || trial_data.manual_additions ~= 1)
       
       if iscell(trial_data.voc_t)
-        
-        audit_multp_ch(trial_data,processed_audio_dir,processed_audio_fnames,proc_fname_indx)
-        
+        audit_multp_ch(trial_data,processed_audio_dir,duration_fnames,proc_fname_indx)
       else
-        
-        audit_single_channel(audio_fn,trial_data,processed_audio_dir,processed_audio_fnames,proc_fname_indx)
-        
+        audit_single_channel(audio_fn,trial_data,processed_audio_dir,...
+          duration_fnames,proc_fname_indx)
       end
     end
   end
 end
-  
+
+warning('on','MATLAB:loadobj');
   

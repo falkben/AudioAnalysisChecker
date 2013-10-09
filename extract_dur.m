@@ -1,5 +1,4 @@
-function [onsets, offsets, voc_t, I] = extract_dur(waveform,Fs,voc_t,trial_start,trial_end,pretrig_t,b2mD,manual,DIAG)
-
+function[onsets,offsets,voc_t,I]=extract_dur(waveform,Fs,voc_t,trial_start,trial_end,pretrig_t,b2mD,manual,DIAG)
 I=[];
 
 %remove extraneous sounds below 12k
@@ -48,7 +47,7 @@ voc_samps = round((voc_t+pretrig_t).*Fs);
 buff_past = .0055*Fs;
 buff_forw = .007*Fs;
 
-if isempty(manual) && ...
+if ~manual && ...
     exist('duration_threshold_fit.mat','file')
   load('duration_threshold_fit.mat');
 end
@@ -96,7 +95,7 @@ for j=1:length(voc_samps)
   thresh_high_noise = noise_diff_high*10;
   thresh_low_noise = noise_diff_low*10;
   
-  if ~isempty(DIAG) || ~isempty(manual)
+  if DIAG || manual
     figure(1); clf;
     
     hh(1)=subplot(3,1,1); cla;
@@ -105,7 +104,7 @@ for j=1:length(voc_samps)
     aa=axis;
     
     hh(2)=subplot(3,1,2); cla;
-    [~,F,T,P] = spectrogram(voc_p,128,120,512,Fs);
+    [~,F,T,P] = spectrogram(voc,128,120,512,Fs);
     imagesc(T,F,10*log10(P)); set(gca,'YDir','normal');
     set(gca,'clim',[-95 -45]);
     axis tight;
@@ -142,16 +141,20 @@ for j=1:length(voc_samps)
       [Mdiffhigh Mdiffhigh Mdifflow Mdifflow],'g');
   end
   
-  if isempty(manual) && pk(j) > .005
+  if ~manual && pk(j) > .005
+    try
     [voc_s,thresh1(j), thresh_high_noise]=...
       find_thresh_crossing(data_square_high_voc(1:loc),...
       thresh1(j),0,'last',smooth_der_voc_high,thresh_high_noise);
     [voc_e,thresh2(j), thresh_low_noise]=...
       find_thresh_crossing(data_square_low_voc(loc:end),...
       thresh2(j),loc,'first',smooth_der_voc_low,thresh_low_noise);
+    catch
+      disp(num2str(j))
+    end
   end
   
-  if ~isempty(DIAG) || ~isempty(manual)    
+  if DIAG || manual
     figure(1);
     axes(hh(1));
     hold on;
@@ -224,7 +227,7 @@ for j=1:length(voc_samps)
     %     figure(6); clf;
     %     scatter(I,offsets-onsets);
     
-    if ~isempty(manual)
+    if manual
       disp('mark start and stop of vocalization')
       axes(hh(3));
       [x]=ginput(2);
@@ -244,12 +247,12 @@ for j=1:length(voc_samps)
 end
 
 
-function [cross, thresh, noise_thresh]= find_thresh_crossing(data,thresh,offset,type,data_diff,noise_thresh)
+function[cross,thresh,noise_thresh]=find_thresh_crossing(data,thresh,offset,type,data_diff,noise_thresh)
 if strcmp(type,'last')
   init_offset = max(1,length(data)-500);
   ii=find(data(init_offset:end)>max(data(init_offset:end))*.75,1,type)+init_offset-1;
   M=data(ii);
-  thresh = min([thresh median(data)*1.5]);
+  thresh = mean([abs(thresh) median(data)*1.5]);
   cross=find(data(1:ii) < thresh,1,type);
   while isempty(cross)
     thresh = thresh*1.5;
