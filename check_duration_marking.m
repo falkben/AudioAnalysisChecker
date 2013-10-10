@@ -32,23 +32,23 @@ for k=1:length(audio_fnames)
     audio_fn(1:end-4))));
   if ~isempty(dur_fname_indx)
     load([processed_audio_dir '\' duration_fnames{dur_fname_indx}])
-    
     audio= load([processed_audio_dir '\' audio_fn]);
-    Fs = audio.SR;
-    pretrig_t = audio.pretrigger;
     
-    if iscell(trial_data.voc_t)
-      mark_good_dur_mtlp_ch(processed_audio_dir,trial_data,audio,Fs,pretrig_t,...
-        duration_fnames,dur_fname_indx)
-    else
-      mark_good_dur_one_ch(processed_audio_dir,trial_data,audio,Fs,pretrig_t,...
-        duration_fnames{dur_fname_indx})
-    end
-    disp(['Finished file ' num2str(k) ' of ' num2str(length(audio_fnames))]);
-    disp('Continue? Press ESC to cancel, any other key to continue')
-    reply = getkey;
-    if isequal(reply, 27)
-      break;
+    if ~isfield(trial_data,'duration_data_audit')
+      if iscell(trial_data.voc_t)
+        mark_good_dur_mtlp_ch(processed_audio_dir,trial_data,audio,...
+          duration_fnames{dur_fname_indx})
+      else
+        mark_good_dur_one_ch(processed_audio_dir,trial_data,audio,...
+          duration_fnames{dur_fname_indx})
+      end
+      disp(['Finished file ' num2str(k) ' of ' num2str(length(audio_fnames))]);
+      disp('Continue with next file? Press ESC to cancel, any other key to continue')
+      reply = getkey;
+      if isequal(reply, 27)
+        disp('pressed ESC, quitting')
+        break;
+      end
     end
   end
 end
