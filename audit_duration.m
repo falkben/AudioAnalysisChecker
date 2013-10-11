@@ -27,17 +27,16 @@ files=dir([processed_audio_dir '\*.mat']);
 audio_fnames = setdiff({files.name},[processed_audio_fnames; duration_fnames]);
 
 for k=1:length(audio_fnames)
+  disp(['Getting File: ' audio_fnames{k}])
   audio_fn = audio_fnames{k};
   dur_fname_indx = find(~cellfun(@isempty,strfind(duration_fnames,...
     audio_fn(1:end-4))));
   if ~isempty(dur_fname_indx)
     load([processed_audio_dir '\' duration_fnames{dur_fname_indx}])
-    
-    audio= load([processed_audio_dir '\' audio_fn]);
-    
     if isfield(trial_data,'duration_data_audit')
       if (~isfield(trial_data,'manual_additions')...
           || trial_data.manual_additions ~= 1)
+        audio=load([processed_audio_dir '\' audio_fn]);
         if iscell(trial_data.voc_t)
           audit_multp_ch(audio,trial_data,processed_audio_dir,...
             duration_fnames{dur_fname_indx})
@@ -46,7 +45,8 @@ for k=1:length(audio_fnames)
             duration_fnames{dur_fname_indx})
         end
         disp(['Finished file ' num2str(k) ' of ' num2str(length(audio_fnames))]);
-        disp('Continue with next file? Press ESC to cancel, any other key to continue')
+        disp('Continue with next file?')
+        disp('Press ESC to cancel, any other key to continue')
         reply = getkey;
         if isequal(reply, 27)
           disp('pressed ESC, quitting')

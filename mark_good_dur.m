@@ -6,7 +6,9 @@ waveform = audio.data(:,trial_data.ch);
 Fs = audio.SR;
 pretrig_t = audio.pretrigger;
 
-disp('Type Enter/Return to keep vocalization, minus to delete voc, ESC to quit');
+disp('Type Enter/Return to keep vocalization');
+disp('minus to delete voc, ESC to quit');
+disp('Arrows LEFT/RIGHT to move Back/Forward');
 
 ff=figure(1);
 set(ff,'position',[50 50 550 700])
@@ -74,7 +76,8 @@ while vv <= length(vv_indx)
   if vv < 1
     vv=1;
   elseif vv > length(vv_indx)
-    disp('saving, press ESC to cancel, BACK to go back, any other key to continue')
+    disp('Do you want to save?')
+    disp('ESC to cancel, BACK to go back, any other key to continue')
     reply = getkey;
     if isequal(reply, 28)
       vv=vv-2;

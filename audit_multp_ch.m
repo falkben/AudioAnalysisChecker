@@ -6,7 +6,7 @@ for kk = 1:length(trial_data.voc_t)
     trial_data.duration_data_audit{kk});
   
   audit_vocs = ~isnan(trial_data.duration_data_audit{kk}(:,2));
-  trial_data.duration_data_audit{kk}(~audit_vocs,:) = new_duration_data;
+  trial_data.duration_data_audit{kk}(~audit_vocs,2:3)=new_duration_data(:,2:3);
   trial_data.manual_additions{kk} = 1;
   save([processed_audio_dir '\' dur_fname],'trial_data');
 end

@@ -156,6 +156,9 @@ function handles = load_marked_vocs(handles)
 if exist([pn fn],'file')
   load([pn fn]);
   set(handles.processed_checkbox,'value',1);
+  if ~isfield(trial_data,'ch')
+    trial_data.ch=1;
+  end
   display_text = ['Processed file found. Channels processed: ' num2str(trial_data.ch')];
   disp(display_text)
   add_text(handles,display_text);
