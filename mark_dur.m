@@ -1,7 +1,7 @@
 function new_duration_data=mark_dur(audio,trial_data,duration_data,duration_data_audit)
 
 ff=figure(1);
-set(ff,'position',[50 50 700 700])
+set(ff,'position',[30 45 750 700])
 
 Fs = audio.SR;
 pretrig_t = audio.pretrigger;

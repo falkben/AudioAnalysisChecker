@@ -26,7 +26,19 @@ processed_audio_fnames={processed_audio_files.name};
 files=dir([processed_audio_dir '\*.mat']);
 audio_fnames = setdiff({files.name},[processed_audio_fnames; duration_fnames]);
 
-for k=1:length(audio_fnames)
+options.WindowStyle='normal';
+choice = questdlg('Would you like to select a starting file?');
+switch choice
+  case 'Yes'
+    file = uigetfile([processed_audio_dir '\*_duration.mat']);
+    start_indx = find(~cellfun(@isempty,strfind(duration_fnames,file)),1);
+  case 'No'
+    start_indx=1;
+  case 'Cancel'
+    return;
+end
+
+for k=start_indx:length(audio_fnames)
   disp(['Getting File: ' audio_fnames{k}])
   audio_fn = audio_fnames{k};
   dur_fname_indx = find(~cellfun(@isempty,strfind(duration_fnames,...

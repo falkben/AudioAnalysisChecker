@@ -11,7 +11,7 @@ disp('minus to delete voc, ESC to quit');
 disp('Arrows LEFT/RIGHT to move Back/Forward');
 
 ff=figure(1);
-set(ff,'position',[50 50 550 700])
+set(ff,'position',[30 45 650 700])
 
 vv_indx=find(~isnan(new_duration_data(:,2)))';
 
