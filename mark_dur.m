@@ -57,4 +57,13 @@ for vv=1:length(remaining_vocs_indx)
     new_duration_data(vv,:) = [voc_time voc_s voc_e];
   end
 end
+
+fprintf('<strong>Save file?</strong>\n');
+disp('Press any key to continue.  ESC to cancel.');
+reply = getkey;
+if isequal(reply, 27)
+  disp('pressed ESC, quitting')
+  return;
+end
+
 completed=1;
