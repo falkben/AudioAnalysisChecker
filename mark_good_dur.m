@@ -76,7 +76,7 @@ while vv <= length(vv_indx)
   if vv < 1
     vv=1;
   elseif vv > length(vv_indx)
-    disp('Do you want to save?')
+    fprintf('<strong>Do you want to save?</strong>\n')
     disp('ESC to cancel, BACK to go back, any other key to continue')
     reply = getkey;
     if isequal(reply, 28)

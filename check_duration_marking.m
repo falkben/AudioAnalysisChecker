@@ -54,7 +54,7 @@ for k=start_indx:length(audio_fnames)
           duration_fnames{dur_fname_indx})
       end
       disp(['Finished file ' num2str(k) ' of ' num2str(length(audio_fnames))]);
-      disp('Continue with next file?');
+      fprintf('<strong>Continue with next file?</strong>\n');
       disp('Press ESC to cancel, any other key to continue')
       reply = getkey;
       if isequal(reply, 27)

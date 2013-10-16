@@ -1,4 +1,5 @@
-function new_duration_data=mark_dur(audio,trial_data,duration_data,duration_data_audit)
+function [new_duration_data,completed]=mark_dur(audio,trial_data,duration_data,duration_data_audit)
+completed=0;
 
 ff=figure(1);
 set(ff,'position',[30 45 750 700])
@@ -11,7 +12,6 @@ audit_vocs = ~isnan(duration_data_audit(:,2));
 remaining_vocs_indx = find(~audit_vocs);
 new_duration_data = nan(length(remaining_vocs_indx),3);
 for vv=1:length(remaining_vocs_indx)
-  
   disp(['On voc #' num2str(vv) ' of ' num2str(length(remaining_vocs_indx)) ' vocs.']);
   
   buffer_s = round((10e-3).*Fs);
@@ -43,11 +43,18 @@ for vv=1:length(remaining_vocs_indx)
   
   linkaxes(hh,'x');
   
-  disp('press Return to ignore voc');
-  [x,~]=ginput(2);
-  if ~isempty(x) && diff(x)>0
+  disp('press Return to ignore voc, ESC (2x) to quit');
+  [x,~,button]=ginput(2);
+  if isempty(x) || ismember(13,button) || length(x) < 2
+    disp('Ignoring voc');
+  elseif diff(x)<0
+    disp('Error clicks not in order, ignoring voc')
+  elseif ismember(27,button) %ESC
+    return;
+  else
     voc_s = voc_time - buffer_s/Fs + x(1);
     voc_e = voc_time - buffer_s/Fs + x(2);
     new_duration_data(vv,:) = [voc_time voc_s voc_e];
   end
 end
+completed=1;
