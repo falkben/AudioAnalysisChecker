@@ -6,8 +6,8 @@ else
     sound_data_dir = '';
 end
 
-bat_band='OR44';
-% BK59 OR40 B52 B57 B53 OR44 P72 W50
+bat_band='BK53';
+% BK59 OR40 BK52 BK57 BK53 OR44 P72 W50
 data_year=2008;
 
 base_path=[sound_data_dir 'lasse_forest_exploration\'];
@@ -41,7 +41,7 @@ else
   trialcodes={};
 end
 
-for dd=1:length(audio_dir)
+for dd=3:length(audio_dir)
   
   pathname=[base_path wavebook_path audio_dir{dd}];
   % pathname=[base_path wavebook_path];
@@ -59,11 +59,27 @@ for dd=1:length(audio_dir)
     length_t=h.PreCount/Fs;
     waveforms = ReadChnlsFromFile(fd,h,c,length_t*Fs,1);
     
+    cd(base_path);
+    d3_indx = match_WB_fname_d3_fnames(filename,d3_fnames,wavebook_naming);
+    cd(orig_dir);
+    d3_end=nan; d3_start=nan;
+    for jj=1:length(d3_indx)
+      load([base_path d3_path d3_fnames{d3_indx(jj)}]);
+      d3_start = min(d3_start,d3_analysed.startframe/d3_analysed.fvideo);
+      d3_end = max(d3_end,d3_analysed.endframe/d3_analysed.fvideo);
+    end
+    trt_data.d3_start = d3_start;
+    trt_data.d3_end = d3_end;
+    
     figure(1); clf;
     hh=[];
     for g=1:size(waveforms,2)
       hh(g)=subplot(size(waveforms,2),1,g);
       plot(waveforms{g}(1:10:end));
+      hold on;
+      rangey=[min(waveforms{g}) max(waveforms{g})];
+      plot((length_t+d3_start)*Fs*ones(2,1)/10,rangey,'g')
+      plot((length_t+d3_end)*Fs*ones(2,1)/10,rangey,'r')
       title(['Channel: ' num2str(g)]);
       axis tight;
     end
@@ -74,13 +90,12 @@ for dd=1:length(audio_dir)
     else
       channel = {'1'};
     end
-    %     close(1);
     
     if ~isempty(channel)
       ch=str2double(channel);
       waveform=waveforms{ch};
       
-      locs = extract_vocs(waveform,Fs,2,.006,2,0);
+      locs = extract_vocs(waveform,Fs,2,.005,2,0);
       
       trt_data.voc_t=locs./Fs - length_t;
       trt_data.trialcode=trialcode;
@@ -89,19 +104,8 @@ for dd=1:length(audio_dir)
       trt_data.voc_checked_time=[];
       trt_data.ch = ch;
       
-      cd(base_path);
-      d3_indx = match_WB_fname_d3_fnames(filename,d3_fnames,wavebook_naming);
-      cd(orig_dir);
-      d3_end=nan; d3_start=nan;
-      for jj=1:length(d3_indx)
-        load([base_path d3_path d3_fnames{d3_indx(jj)}]);
-        d3_start = min(d3_start,d3_analysed.startframe/d3_analysed.fvideo);
-        d3_end = max(d3_end,d3_analysed.endframe/d3_analysed.fvideo);
-      end
-      trt_data.d3_start = d3_start;
-      trt_data.d3_end = d3_end;
-      
       indx=find(strcmp(trialcodes,trt_data.trialcode));
+      trt_data=orderfields(trt_data, extracted_sound_data);
       if ~isempty(indx)
         extracted_sound_data(indx) = trt_data;
       else
