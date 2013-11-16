@@ -56,6 +56,7 @@ for k=start_indx:length(audio_fnames)
         mark_good_dur_one_ch(processed_audio_dir,trial_data,audio,...
           duration_fnames{dur_fname_indx})
       end
+      clf;
       disp(['Finished file ' num2str(k) ' of ' num2str(length(audio_fnames))]);
       fprintf('<strong>Continue with next file?</strong>\n');
       disp('Press ESC to cancel, any other key to continue')
