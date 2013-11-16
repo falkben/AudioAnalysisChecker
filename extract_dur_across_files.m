@@ -3,8 +3,6 @@ clear
 manual=0;
 DIAG=0;
 
-warning('off','MATLAB:loadobj');
-
 % default_proc_folder is the folder where the processed files are
 % default_proc_folder = 'E:\Data Stage USA\Floor_mics\Base_line_data_Empty_room\R14\';
 if ispref('audioanalysischecker') && ispref('audioanalysischecker','audio_pname')...
@@ -80,10 +78,11 @@ for k=1:length(processed_audio_fnames)
       if isempty(trial_data.d3_start)||isempty(trial_data.d3_end)
         disp(['no video trial found for ' audio_fn]);
       else
-        audio = load([processed_audio_dir '\' audio_fn]);
+        [waveforms,Fs,pretrig_t,waveform_y_range]=load_audio(processed_audio_dir,audio_fn);
+        audio.data=waveforms;
+        audio.SR=Fs;
+        audio.pretrigger=pretrig_t;
         
-        Fs = audio.SR;
-        pretrig_t=audio.pretrigger;
         if iscell(trial_data.voc_t)
           for kk=1:length(trial_data.voc_t)
             ch_voc_t=trial_data.voc_t{kk};
@@ -115,5 +114,3 @@ for k=1:length(processed_audio_fnames)
 end
 
 disp('All files completed');
-warning('on','MATLAB:loadobj');
-% end

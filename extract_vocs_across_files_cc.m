@@ -52,16 +52,8 @@ else
 end
 for k=1:length(files)
   fname = files(k).name;
-  if strcmp(fname(end-2:end),'mat')
-    warning('off','MATLAB:loadobj');
-    load([base_dir '\' fname]);
-    warning('on','MATLAB:loadobj');
-  else
-    [fd,h,c] = OpenIoTechBinFile([base_dir '\' fname]);
-    Fs = h.preFreq;
-    length_t=h.PreCount/Fs;
-    data = cell2mat(ReadChnlsFromFile(fd,h,c,length_t*Fs,1));
-  end
+  
+  [data,Fs,length_t]=load_audio(base_dir,fname);
   
   figure(1);clf;set(gcf,'position',[8 40 500 1000]);
   hh=[];
