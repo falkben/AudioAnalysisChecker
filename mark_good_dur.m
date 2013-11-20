@@ -16,11 +16,11 @@ set(ff,'position',[30 45 650 700])
 vv_indx=find(~isnan(new_duration_data(:,2)))';
 
 vv=1;
+buffer_s = round((2e-3).*Fs);
+buffer_e = round((2e-3).*Fs);
 while vv <= length(vv_indx)
   voc_s = trial_data.duration_data(vv_indx(vv),2);
   voc_e = trial_data.duration_data(vv_indx(vv),3);
-  buffer_s = round((2e-3).*Fs);
-  buffer_e = round((2e-3).*Fs);
   samp_s = round((voc_s + pretrig_t).*Fs);
   samp_e = round((voc_e + pretrig_t).*Fs);
   

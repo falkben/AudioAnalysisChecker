@@ -11,11 +11,11 @@ voc_ts = duration_data(:,1);
 audit_vocs = ~isnan(duration_data_audit(:,2));
 remaining_vocs_indx = find(~audit_vocs);
 new_duration_data = nan(length(remaining_vocs_indx),3);
+buffer_s = round((10e-3).*Fs);
+buffer_e = round((14e-3).*Fs);
 for vv=1:length(remaining_vocs_indx)
   disp(['On voc #' num2str(vv) ' of ' num2str(length(remaining_vocs_indx)) ' vocs.']);
   
-  buffer_s = round((10e-3).*Fs);
-  buffer_e = round((14e-3).*Fs);
   voc_time = voc_ts(remaining_vocs_indx(vv));
   voc_samp = round((voc_time + pretrig_t)*Fs);
   voc=waveform(max(1,voc_samp-buffer_s):min(voc_samp+buffer_e,length(waveform)));
