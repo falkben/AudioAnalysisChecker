@@ -110,6 +110,10 @@ if ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArray)
   return;
 end
 
+if ~isfield(handles.internal,'ch')
+  disp('no channel specified... assuming channel 1');
+  handles.internal.ch=1;
+end
 handles.internal.waveform=handles.internal.waveforms(:,handles.internal.ch);
 
 handles.internal.current_voc=1;
