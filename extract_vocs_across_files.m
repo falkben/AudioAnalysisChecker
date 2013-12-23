@@ -6,7 +6,7 @@ else
     sound_data_dir = '';
 end
 
-bat_band='BK53';
+bat_band='O92';
 % BK59 OR40 BK52 BK57 BK53 OR44 P72 W50
 data_year=2008;
 

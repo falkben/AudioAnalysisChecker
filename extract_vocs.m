@@ -1,6 +1,6 @@
 %thresh_mult, how much above noise to mark a call
 %min_PI, acceptable amount of time (sec) between calls
-function [locs pks]=extract_vocs(dd,SR,thesh_mult,min_PI,echo_rem_iterations,DIAG)
+function[locs,pks]=extract_vocs(dd,SR,thesh_mult,min_PI,echo_rem_iterations,DIAG)
 
 %remove extraneous sounds below 20k
 [b,a] = butter(6,20e3/(SR/2),'high');
@@ -25,7 +25,7 @@ for k=1:echo_rem_iterations
   pks(remove_pks)=[];
 end
 
-if nargin > 4 && DIAG
+if nargin > 5 && DIAG
   buffer=.004*SR;
   %indx=1
   for indx=1:-1%length(locs)

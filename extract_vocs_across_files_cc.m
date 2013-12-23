@@ -85,11 +85,11 @@ for k=1:length(files)
   end
   
   for ch=chs
-    [locs]=extract_vocs(data(:,ch),SR,2,.005,2,0);
+    [locs]=extract_vocs(data(:,ch),Fs,2,.005,2,0);
     length_t = pretrigger;
     
     trt_data=[];
-    trt_data.voc_t=locs./SR - length_t;
+    trt_data.voc_t=locs./Fs - length_t;
     trt_data.trialcode=trialcode;
     trt_data.bat=bat_band;
     trt_data.voc_checked=[];
