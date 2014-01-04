@@ -13,7 +13,9 @@ for v=1:length(voc_t)
   voc=voc_t(v);
 
   d_indx = find( (t_at_mike - voc) < 0 , 1 , 'last');
-  delay(v) = delays_at_bat(d_indx);
+  if ~isempty(d_indx)
+    delay(v) = delays_at_bat(d_indx);
+  end
 end
 
 emission_t = voc_t - delay;

@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 20-May-2013 15:24:36
+% Last Modified by GUIDE v2.5 03-Jan-2014 20:28:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -725,7 +725,7 @@ switch key
     prev_button_Callback(handles.prev_button, eventdata, handles);
   case {'period','decimal'}
     new_button_Callback(handles.new_button, eventdata, handles);
-  case {'subtract','hyphen'}
+  case {'subtract','hyphen','delete'}
     delete_button_Callback(handles.delete_button, eventdata, handles);
 end
 
