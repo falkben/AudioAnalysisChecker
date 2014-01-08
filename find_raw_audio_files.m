@@ -1,7 +1,7 @@
 function [raw_audio_dir,audio_fnames]=find_raw_audio_files(raw_audio_dir,processed_audio_fnames,duration_fnames)
 
 files=dir([raw_audio_dir '\*.mat']);
-audio_fnames = setdiff({files.name},[processed_audio_fnames; duration_fnames]);
+audio_fnames = setdiff({files.name},[processed_audio_fnames'; duration_fnames']);
 if isempty(audio_fnames)
   files=dir([raw_audio_dir '\*.bin']);
   audio_fnames = {files.name};
