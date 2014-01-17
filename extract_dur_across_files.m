@@ -66,13 +66,18 @@ for k=1:length(processed_audio_fnames)
         end
       end
       
-      if isfield(d3_analysed,'ignore_segs')
+      if exist('d3_analysed','var') && isfield(d3_analysed,'ignore_segs')
         full_indx=round(trial_data.d3_start*d3_analysed.fvideo):round(trial_data.d3_end*d3_analysed.fvideo);
         full_indx(d3_analysed.ignore_segs)=[];
 %         sub_indx = setdiff(full_indx,d3_analysed.ignore_segs+d3_analysed.startframe-1);
         
         trial_data.d3_start = full_indx(1)/d3_analysed.fvideo;
         trial_data.d3_end = (full_indx(end))/d3_analysed.fvideo;
+      end
+      
+      
+      if ~exist('d3_analysed','var')
+        fvideo=0;
       end
       
       if isempty(trial_data.d3_start)||isempty(trial_data.d3_end)
@@ -90,7 +95,7 @@ for k=1:length(processed_audio_fnames)
             waveform=audio.data(:,ch);
             
             trial_data.duration_data{kk}=extract_dur_each_file(waveform,ch_voc_t,...
-              trial_data,d3_analysed.fvideo,Fs,manual,DIAG);
+              trial_data,fvideo,Fs,manual,DIAG);
           end
         else
           if ~isfield(trial_data,'ch')
@@ -98,7 +103,7 @@ for k=1:length(processed_audio_fnames)
           end
           waveform=audio.data(:,trial_data.ch);
           trial_data.duration_data=extract_dur_each_file(waveform,trial_data.voc_t,...
-            trial_data,d3_analysed.fvideo,Fs,pretrig_t,manual,DIAG);
+            trial_data,fvideo,Fs,pretrig_t,manual,DIAG);
         end
         
         save([processed_audio_dir '\'...
