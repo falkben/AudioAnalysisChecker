@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 03-Jan-2014 20:28:17
+% Last Modified by GUIDE v2.5 22-Feb-2014 14:34:24
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -515,6 +515,10 @@ trial_data.voc_checked_time=datevec(now);
 %overwrite it but add it to the trial data
 if exist([pn fn],'file')
   prev_file=load([pn fn]);
+  if ~isfield(prev_file.trial_data,'ch')
+    %assume ch 1
+    prev_file.trial_data.ch = 1;
+  end
   ii=ismember(prev_file.trial_data.ch,trial_data.ch);
   if length(ii) > 1 || isempty(find(ii,1))
     if find(ii,1) %then the processed file has data from your channel, and we overwrite that channel
@@ -762,14 +766,14 @@ if isempty(fnames_unsort)
   all_files=dir([pname '*.bin']);
   fnames={all_files.name};
 else
-%   fname_dates = cellfun(@(f) datenum(f(1:10),'yyyy.mm.dd'),fnames_unsort);
-%   [~, ia] = sort(fname_dates);
-%   fname_tcodes = cellfun(@(f) str2double(f(12:end-3)),fnames_unsort);
-%   [~, ib] = sort(fname_tcodes);
-%   ia_order = 1:length(ia);
-%   A=[ia_order', ia_order(ib)'];
-%   [~, index]=sortrows(A,[1 2]);
-%   fnames = fnames_unsort(ia(index))';
+  %   fname_dates = cellfun(@(f) datenum(f(1:10),'yyyy.mm.dd'),fnames_unsort);
+  %   [~, ia] = sort(fname_dates);
+  %   fname_tcodes = cellfun(@(f) str2double(f(12:end-3)),fnames_unsort);
+  %   [~, ib] = sort(fname_tcodes);
+  %   ia_order = 1:length(ia);
+  %   A=[ia_order', ia_order(ib)'];
+  %   [~, index]=sortrows(A,[1 2]);
+  %   fnames = fnames_unsort(ia(index))';
   fnames=fnames_unsort;
 end
 
@@ -928,3 +932,81 @@ end
 function clear_sound_data_path_pushbutton_Callback(hObject, eventdata, handles)
 setpref('audioanalysischecker','sound_data_pname','');
 set_sound_data_path(handles);
+
+
+% --------------------------------------------------------------------
+function export_wav_Callback(hObject, eventdata, handles)
+
+options.WindowStyle='normal';
+Fs=handles.internal.Fs;
+
+wavFs = inputdlg('Set desired sample rate for wav file',...
+  '',1,{num2str(Fs)},options);
+if isempty(wavFs)
+  return;
+else
+  wavFs=round(str2double(wavFs));
+end
+
+%for cropping to current view and zeroing out non vocs
+voc_time = handles.internal.DataArray(handles.internal.current_voc);
+voc_sample = round((voc_time + handles.internal.length_t)*Fs);
+buffer=round(handles.samples/2);
+sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,...
+  length(handles.internal.waveform));
+
+
+outchoice = questdlg('Entire File or Current View?', ...
+  'Output Size', ...
+  'Entire File','Crop to current view','Cancel','Crop to current view');
+switch outchoice
+  case 'Entire File'
+    data=handles.internal.waveform;
+  case 'Crop to current view'
+    data=handles.internal.waveform(sample_range);
+  case 'Cancel'
+    return;
+end
+
+zerochoice = questdlg('Zero out non voc sections?', ...
+  'Zeroing', ...
+  'Yes','No','Cancel','Yes');
+switch zerochoice
+  case 'Yes'
+    all_voc_times=handles.internal.DataArray;
+    t=(sample_range)./Fs-handles.internal.length_t;
+    time_range=t([1 end]);
+    voc_t_indx=all_voc_times>=time_range(1)...
+      & all_voc_times<=time_range(2);
+
+    disp_voc_times=all_voc_times(voc_t_indx);
+    voc_nums=find(voc_t_indx);
+    
+    ii=nan(length(disp_voc_times),1);
+    for k=1:length(disp_voc_times)
+      [~,ii(k)]=min(abs(t-disp_voc_times(k)));
+    end
+    voc_buffer=.0025*Fs; %adjust this as needed (5ms call max here 2.5 on either side)
+    incl_samps=cell2mat(arrayfun(@(c) (c-voc_buffer:c+voc_buffer),ii,...
+      'uniformoutput',0));
+    zero_samps=setdiff(1:length(data),incl_samps);
+    data(zero_samps)=0;
+  case 'No'
+  case 'Cancel'
+    return;
+end
+
+fn=[handles.internal.audio_fname(1:end-3) 'wav'];
+[file,path] = uiputfile([handles.internal.audio_pname fn],'Save as');
+
+if isequal(file,0)
+  return
+end
+
+audiowrite([path file],data./(max(abs(data))+.01),wavFs);
+
+
+
+
+
+
