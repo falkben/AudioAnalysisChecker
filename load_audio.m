@@ -1,4 +1,11 @@
-function [waveforms,Fs,length_t,waveform_y_range]=load_audio(pathname,filename)
+function [waveforms,Fs,length_t,waveform_y_range]=load_audio(pathname,filename,exportwav)
+
+if nargin<2
+  [filename,pathname]=uigetfile('*.*');
+  if isequal(pathname,0)
+    return
+  end
+end
 
 %determine which file it is from the filename
 if strcmp(filename(end-2:end),'mat') %loading from nidaq_matlab_tools
@@ -16,4 +23,8 @@ elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
   waveforms = ReadChnlsFromFile(fd,h,c,length_t*Fs,1);
   waveforms=cell2mat(waveforms);
   waveform_y_range = [-5 5];
+end
+
+if nargin<3 || exportwav
+  audiowrite([pathname filename(1:end-3) 'wav'],waveforms./abs(max(waveform_y_range)),Fs);
 end
