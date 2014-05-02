@@ -106,7 +106,8 @@ handles.internal.audio_fname=filename;
 handles=load_waveform(handles);
 
 handles = load_marked_vocs(handles);
-if ~isfield(handles.internal,'DataArray') || isempty(handles.internal.DataArray)
+if ~isfield(handles.internal,'DataArray') ||...
+    ~isempty(find(isnan(handles.internal.DataArray),1))
   return;
 end
 
@@ -116,7 +117,11 @@ if ~isfield(handles.internal,'ch')
 end
 handles.internal.waveform=handles.internal.waveforms(:,handles.internal.ch);
 
-handles.internal.current_voc=1;
+if ~isempty(handles.internal.DataArray)
+  handles.internal.current_voc=1;
+else
+  handles.internal.current_voc=[];
+end
 display_text = ['Opened file: ' handles.internal.audio_fname];
 disp(display_text)
 add_text(handles,display_text);
@@ -172,7 +177,7 @@ if exist([pn fn],'file')
   end
 else
   handles = load_sound_data(handles);
-  if isempty(handles.internal.DataArray)
+  if ~isempty(find(isnan(handles.internal.DataArray),1))
     return;
   end
 end
@@ -195,18 +200,7 @@ else
     set_sound_data_path(handles);
     handles = load_sound_data_mat(handles,sound_data_pname);
   else
-    % dialog box to ask if you want to generate processed file
-    button = questdlg('Generate a pre-processed file?','Preprocess sound data?');
-    switch button
-      case 'Cancel'
-        return
-      case 'OK'
-        %preprocess sound data
-        %           locs=extract_vocs(handles.sound_data,SR,2.5,.006,1)
-      case 'No'
-        %load the audio data and display it
-        %load in other markings?
-    end
+    handles=deal_with_no_sound_data(handles);
   end
 end
 
@@ -263,11 +257,16 @@ if length(indx)>1
 end
 
 if isempty(indx)
-  handles.internal.DataArray=[];
+  handles.internal.DataArray=nan;
   display_text = ['trial: ' trialcode ' absent.'];
   disp(display_text)
   add_text(handles,display_text);
-  return;
+  [handles,loaded]=deal_with_no_sound_data(handles);
+  if ~loaded
+    return;
+  end
+  indx=length(handles.sound_data);
+  extracted_sound_data=handles.sound_data;
 end
 
 if isfield(extracted_sound_data(indx),'net_crossings')
@@ -280,6 +279,90 @@ if isfield(handles.internal.extracted_sound_data,'ch')
   handles.internal.ch = handles.internal.extracted_sound_data.ch;
 end
 handles.internal.changed=0;
+
+
+function [handles,loaded]=deal_with_no_sound_data(handles)
+loaded=0;
+% dialog box to ask if you want to generate processed file
+button = questdlg('Generate pre-processed data?','Preprocess sound data?');
+switch button
+  case 'Cancel'
+    return
+  case 'Yes'
+    trt_data=preprocess_sound_data(handles);
+    if isempty(trt_data)
+      return;
+    end
+    
+    handles.sound_data(end+1)=trt_data;
+    handles.sound_data_checksum=[];
+    loaded=1;
+  case 'No'
+    ch=decide_channel(handles.internal.waveforms);
+    if isempty(ch)
+      return;
+    end
+    %load the audio data and display it
+    trt_data=[];
+    trt_data.voc_t=[];
+    trt_data.trialcode=handles.internal.audio_fname(1 : end -4);
+    trt_data.bat='';
+    trt_data.voc_checked=[];
+    trt_data.voc_checked_time=[];
+    trt_data.ch = ch;
+    trt_data.d3_start =[];
+    trt_data.d3_end=[];
+    
+    handles.sound_data(end+1)=trt_data;
+    handles.sound_data_checksum=[];
+    loaded=1;
+end
+
+function ch=decide_channel(data)
+if size(data,2)>1
+  figure(1); clf; set(gcf,'position',[8 50 400 700])
+  for ch=1:size(data,2)
+    subplot(size(data,2),1,ch)
+    plot(data(1:3:end,ch));
+    axis tight;
+    title(['channel ' num2str(ch)])
+  end
+  
+  %which channel
+  options.WindowStyle='normal';
+  ch = inputdlg('Channel?','',1,{''},options);
+  if isempty(ch)
+    return;
+  else
+    ch=str2double(ch{1});
+  end
+end
+
+function trt_data=preprocess_sound_data(handles)
+%preprocess sound data
+trt_data=[];
+data=handles.internal.waveforms;
+Fs=handles.internal.Fs;
+length_t=handles.internal.length_t;
+fname=handles.internal.audio_fname;
+trialcode = fname(1 : end -4);
+
+ch=decide_channel(data);
+if isempty(ch)
+  return;
+end
+
+locs=extract_vocs(data(:,ch),Fs,2,.005,2,0);
+
+trt_data.voc_t=locs./Fs - length_t;
+trt_data.trialcode=trialcode;
+trt_data.bat='';
+trt_data.voc_checked=[];
+trt_data.voc_checked_time=[];
+trt_data.ch = ch;
+trt_data.d3_start =[];
+trt_data.d3_end=[];
+
 
 
 function add_text(handles,text)
@@ -307,6 +390,9 @@ selected_wave_axes = contents{get(handles.wave_axes_switch,'Value')}; %returns s
 
 buffer=round(handles.samples/2);
 sample_range=max(1,voc_sample-buffer):min(voc_sample+buffer,length(handles.internal.waveform));
+if isempty(sample_range)
+  sample_range=1:handles.samples;
+end
 X=handles.internal.waveform(sample_range);
 t=(sample_range)./Fs-handles.internal.length_t;
 
@@ -341,12 +427,14 @@ voc_t_indx=all_voc_times>=time_range(1)...
 
 disp_voc_times=all_voc_times(voc_t_indx);
 voc_nums=find(voc_t_indx);
-hold on;
-plot([disp_voc_times disp_voc_times]',[a(3) a(4)],'color','r');
-text(disp_voc_times,(a(4)-.1*(a(4)-a(3)))*ones(length(voc_nums),1),num2str(voc_nums),...
-  'horizontalalignment','center');
-plot([voc_time voc_time],[a(3) a(4)],'color',[.6 .6 1]);
-hold off;
+if ~isempty(disp_voc_times)
+  hold on;
+  plot([disp_voc_times disp_voc_times]',[a(3) a(4)],'color','r');
+  text(disp_voc_times,(a(4)-.1*(a(4)-a(3)))*ones(length(voc_nums),1),num2str(voc_nums),...
+    'horizontalalignment','center');
+  plot([voc_time voc_time],[a(3) a(4)],'color',[.6 .6 1]);
+  hold off;
+end
 % text(disp_voc_times,zeros(length(disp_voc_times),1),...
 %   'X','HorizontalAlignment','center','color','c','fontsize',14,'fontweight','bold');
 
@@ -492,19 +580,22 @@ trial_data=handles.internal.extracted_sound_data;
 trial_data.voc_t=handles.internal.DataArray;
 trial_data.ch=handles.internal.ch;
 
-%calculating emission times
-static = load_static(handles);
-if isempty(static)
-  display_text = 'Couldn''t load static trial for determining emission time, emission times not calculated';
-  disp(display_text);
-  add_text(handles,display_text);
-elseif isfield(trial_data,'net_crossings')
-  NC=trial_data.net_crossings;
-  frames=max(1,NC(1)-300):min(NC(2)+500,length(trial_data.sm_centroid));
-  mic = get_microphone_position(static,handles);
-  D=distance(trial_data.sm_centroid(frames,:),mic);
-  t=frames/300-length(trial_data.centroid)/300;
-  trial_data.emission_t = calc_emission_times(D,t,trial_data.voc_t);
+%loading static trial for calc. emission time not necessarily limited to net crossing data set but in actuality the only one where we do this
+if isfield(trial_data,'net_crossings') 
+  %calculating emission times
+  static = load_static(handles);
+  if isempty(static)
+    display_text = 'Couldn''t load static trial for determining emission time, emission times not calculated';
+    disp(display_text);
+    add_text(handles,display_text);
+  elseif isfield(trial_data,'net_crossings')
+    NC=trial_data.net_crossings;
+    frames=max(1,NC(1)-300):min(NC(2)+500,length(trial_data.sm_centroid));
+    mic = get_microphone_position(static,handles);
+    D=distance(trial_data.sm_centroid(frames,:),mic);
+    t=frames/300-length(trial_data.centroid)/300;
+    trial_data.emission_t = calc_emission_times(D,t,trial_data.voc_t);
+  end
 end
 
 trial_data.voc_checked=1;
@@ -658,8 +749,12 @@ axes(handles.wave_axes);
 [x,y] = ginput(1);
 voc_time = handles.internal.DataArray(handles.internal.current_voc);
 buffer=handles.samples/2/handles.internal.Fs;
+if isempty(handles.internal.current_voc)
+  voc_time=-handles.internal.length_t; %assuming you are at the start of the file
+  handles.internal.current_voc=1;
+end
 if x > voc_time - buffer && x < voc_time + buffer
-  handles.internal.DataArray(end+1)=x;
+  handles.internal.DataArray(end+1,1)=x;
   handles.internal.DataArray = sort(handles.internal.DataArray);
   handles.internal.changed=1;
   update(handles);
@@ -978,7 +1073,7 @@ switch zerochoice
     time_range=t([1 end]);
     voc_t_indx=all_voc_times>=time_range(1)...
       & all_voc_times<=time_range(2);
-
+    
     disp_voc_times=all_voc_times(voc_t_indx);
     voc_nums=find(voc_t_indx);
     
