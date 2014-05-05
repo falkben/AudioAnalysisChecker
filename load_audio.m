@@ -25,6 +25,6 @@ elseif strcmp(filename(end-2:end),'bin') %loading from wavebook
   waveform_y_range = [-5 5];
 end
 
-if nargin<3 || exportwav
+if nargin>2 && exportwav
   audiowrite([pathname filename(1:end-3) 'wav'],waveforms./abs(max(waveform_y_range)),Fs);
 end
