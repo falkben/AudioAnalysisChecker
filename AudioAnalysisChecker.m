@@ -81,7 +81,8 @@ if nargin == 1
   if isfield(handles.internal,'audio_pname') && ...
       exist(handles.internal.audio_pname,'dir')
     pathname=handles.internal.audio_pname;
-  elseif ispref('audioanalysischecker','audio_pname')
+  elseif ispref('audioanalysischecker','audio_pname') && ...
+      exist(getpref('audioanalysischecker','audio_pname'),'dir')
     pathname=getpref('audioanalysischecker','audio_pname');
   else
     STARTDIR='';
@@ -289,12 +290,12 @@ switch button
   case 'Cancel'
     return
   case 'Yes'
-    trt_data=preprocess_sound_data(handles);
+    [trt_data,handles]=preprocess_sound_data(handles);
     if isempty(trt_data)
       return;
     end
     
-    handles.sound_data(end+1)=trt_data;
+    handles.sound_data(end+1)=orderfields(trt_data,handles.sound_data);
     handles.sound_data_checksum=[];
     loaded=1;
   case 'No'
@@ -309,11 +310,22 @@ switch button
     trt_data.bat='';
     trt_data.voc_checked=[];
     trt_data.voc_checked_time=[];
-    trt_data.ch = ch;
-    trt_data.d3_start =[];
-    trt_data.d3_end=[];
+    if isfield(handles.sound_data,'ch')
+      trt_data.ch = ch;
+    end
+    if isfield(handles.sound_data,'d3_start')
+      trt_data.d3_start =[];
+      trt_data.d3_end=[];
+    end
+    if isfield(handles.sound_data,'net_crossings')
+      trt_data.net_crossings=[];
+      trt_data.centroid=[];
+      trt_data.sm_centroid=[];
+      trt_data.speed=[];
+      trt_data.treatment_type='';
+    end
     
-    handles.sound_data(end+1)=trt_data;
+    handles.sound_data(end+1)=orderfields(trt_data,handles.sound_data);
     handles.sound_data_checksum=[];
     loaded=1;
 end
@@ -322,11 +334,12 @@ function ch=decide_channel(data)
 if size(data,2)>1
   figure(1); clf; set(gcf,'position',[8 50 400 700])
   for ch=1:size(data,2)
-    subplot(size(data,2),1,ch)
+    hh(ch)=subplot(size(data,2),1,ch);
     plot(data(1:3:end,ch));
     axis tight;
     title(['channel ' num2str(ch)])
   end
+  linkaxes(hh);
   
   %which channel
   options.WindowStyle='normal';
@@ -336,9 +349,10 @@ if size(data,2)>1
   else
     ch=str2double(ch{1});
   end
+  close(1);
 end
 
-function trt_data=preprocess_sound_data(handles)
+function [trt_data,handles]=preprocess_sound_data(handles)
 %preprocess sound data
 trt_data=[];
 data=handles.internal.waveforms;
@@ -359,10 +373,22 @@ trt_data.trialcode=trialcode;
 trt_data.bat='';
 trt_data.voc_checked=[];
 trt_data.voc_checked_time=[];
-trt_data.ch = ch;
-trt_data.d3_start =[];
-trt_data.d3_end=[];
-
+if isfield(handles.sound_data,'ch')
+  trt_data.ch = ch;
+else
+  handles.internal.ch=ch;
+end
+if isfield(handles.sound_data,'d3_start')
+  trt_data.d3_start =[];
+  trt_data.d3_end=[];
+end
+if isfield(handles.sound_data,'net_crossings')
+  trt_data.net_crossings=[];
+  trt_data.centroid=[];
+  trt_data.sm_centroid=[];
+  trt_data.speed=[];
+  trt_data.treatment_type='';
+end
 
 
 function add_text(handles,text)
@@ -455,7 +481,7 @@ if isfield(handles.internal.extracted_sound_data,'d3_start') && ...
 end
 
 %displaying net crossings if visible
-if isfield(handles.internal,'net_crossings')
+if isfield(handles.internal,'net_crossings') && ~isempty(handles.internal.net_crossings)
   hold on;
   net_crossings = handles.internal.net_crossings;
   
@@ -521,7 +547,7 @@ if handles.internal.current_voc > 1
   plot(t(handles.internal.current_voc-1),PI(handles.internal.current_voc-1),...
     'o','linewidth',2,'color',[.6 .6 1]);
 end
-if isfield(handles.internal,'net_crossings')
+if isfield(handles.internal,'net_crossings') && ~isempty(handles.internal.net_crossings)
   for k=1:length(handles.internal.net_crossings)
     plot(handles.internal.net_crossings(k)*ones(2,1),[0 a(4)],...
       'b','linewidth',2);
@@ -588,7 +614,7 @@ if isfield(trial_data,'net_crossings')
     display_text = 'Couldn''t load static trial for determining emission time, emission times not calculated';
     disp(display_text);
     add_text(handles,display_text);
-  elseif isfield(trial_data,'net_crossings')
+  elseif isfield(trial_data,'net_crossings') && ~isempty(trial_data.net_crossings)
     NC=trial_data.net_crossings;
     frames=max(1,NC(1)-300):min(NC(2)+500,length(trial_data.sm_centroid));
     mic = get_microphone_position(static,handles);
