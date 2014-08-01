@@ -15,6 +15,9 @@ set(ff,'position',[30 45 650 700])
 
 vv_indx=find(~isnan(new_duration_data(:,2)))';
 
+max_dur=max(trial_data.duration_data(vv_indx(:),3)-...
+  trial_data.duration_data(vv_indx(:),2));
+
 vv=1;
 buffer_s = round((2e-3).*Fs);
 buffer_e = round((2e-3).*Fs);
@@ -35,6 +38,7 @@ while vv <= length(vv_indx)
     [min(voc_p) max(voc_p)],'r')
   axis tight;
   aa=axis;
+  axis([aa(1) aa(1)+max_dur+(buffer_s+buffer_e)./Fs aa(3:4)]);
   hold off;
   
   hh(2)=subplot(2,1,2); cla;
@@ -49,7 +53,6 @@ while vv <= length(vv_indx)
   plot([buffer_s buffer_s]./Fs,[0 Fs/2],'r')
   plot([buffer_s+samp_e-samp_s buffer_s+samp_e-samp_s]./Fs,...
     [0 Fs/2],'r')
-  axis([aa(1:2) aaa(3:4)]);
   hold off;
   
   linkaxes(hh,'x');

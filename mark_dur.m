@@ -2,7 +2,8 @@ function [new_duration_data,completed]=mark_dur(audio,trial_data,duration_data,d
 completed=0;
 
 ff=figure(1);
-set(ff,'position',[30 45 750 700])
+scrnsize=get(0,'Screensize');
+set(ff,'position',[scrnsize(3)/2-750/2 45 750 700])
 
 Fs = audio.SR;
 pretrig_t = audio.pretrigger;
@@ -13,6 +14,10 @@ remaining_vocs_indx = find(~audit_vocs);
 new_duration_data = nan(length(remaining_vocs_indx),3);
 buffer_s = round((10e-3).*Fs);
 buffer_e = round((14e-3).*Fs);
+
+max_dur=max(trial_data.duration_data(:,3)-...
+  trial_data.duration_data(:,2));
+
 for vv=1:length(remaining_vocs_indx)
   disp(['On voc #' num2str(vv) ' of ' num2str(length(remaining_vocs_indx)) ' vocs.']);
   
@@ -28,6 +33,7 @@ for vv=1:length(remaining_vocs_indx)
   plot(buffer_s/Fs,0,'*g');
   axis tight;
   aa=axis;
+  axis([aa(1) aa(1)+max_dur+(buffer_s+buffer_e)./Fs aa(3:4)]);
   hold off;
   
   hh(2)=subplot(2,1,2); cla;
