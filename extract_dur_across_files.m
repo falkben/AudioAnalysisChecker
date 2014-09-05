@@ -43,6 +43,7 @@ processed_duration_fnames={processed_duration_files.name};
 d3_files = dir([d3_folder '\*.mat']);
 
 for k=1:length(processed_audio_fnames)
+  clear d3_analysed;
   undr = strfind(processed_audio_fnames{k},'_');
   audio_fn = [processed_audio_fnames{k}(1:undr(end)-1) '.mat'];
   if ~isempty(audio_fn) || exist([processed_audio_dir audio_fn],'file')
@@ -58,7 +59,8 @@ for k=1:length(processed_audio_fnames)
         trial_data.d3_start = trial_data.voc_t(1);
         trial_data.d3_end = 0;
         for jj=1:length(d3_indx)
-          load([d3_folder '\' d3_files(d3_indx(jj)).name]);
+          d3_data=load([d3_folder '\' d3_files(d3_indx(jj)).name]);
+          d3_analysed=d3_data.d3_analysed;
           trial_data.d3_start=...
             min(d3_analysed.startframe/d3_analysed.fvideo,trial_data.d3_start);
           trial_data.d3_end=...

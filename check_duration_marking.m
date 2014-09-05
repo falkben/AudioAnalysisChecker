@@ -29,6 +29,9 @@ choice = questdlg('Would you like to select a starting file?');
 switch choice
   case 'Yes'
     file = uigetfile([processed_audio_dir '\*_duration.mat']);
+    if isequal(file,0)
+      return;
+    end
     start_indx = find(~cellfun(@isempty,strfind(audio_fnames,file(1:end-23))),1);
   case 'No'
     start_indx=1;
