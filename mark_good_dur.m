@@ -67,9 +67,11 @@ while vv <= length(vv_indx)
       new_duration_data(vv_indx(vv),2:3)=...
         trial_data.duration_data(vv_indx(vv),2:3);
       vv=vv+1;
+      voc_status(hh,buffer_s/Fs,'OK','g',.05)
     case 45 % delete voc
       new_duration_data(vv_indx(vv),2:3)=nan;
       vv=vv+1;
+      voc_status(hh,buffer_s/Fs,'X','r',.15)
     case 27 %ESC
       disp(['On voc: ' num2str(vv_indx(vv))]);
       return;

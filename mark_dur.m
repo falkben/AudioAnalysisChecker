@@ -51,19 +51,22 @@ for vv=1:length(remaining_vocs_indx)
   
   disp('press Return to ignore voc, ESC (2x) to quit');
   [x,~,button]=ginput(2);
-  if isempty(x) || ismember(13,button) || length(x) < 2
+  if isempty(x) || ismember(13,button) || length(x) < 2 %ignoring
     disp('Ignoring voc');
+    voc_status(hh,buffer_s/Fs,'X','r',.1)
   elseif diff(x)<0
     disp('Error clicks not in order, ignoring voc')
+    voc_status(hh,buffer_s/Fs,'X','r',.1)
   elseif ismember(27,button) %ESC
     return;
   else
     voc_s = voc_time - buffer_s/Fs + x(1);
     voc_e = voc_time - buffer_s/Fs + x(2);
     new_duration_data(vv,:) = [voc_time voc_s voc_e];
+    voc_status(hh,buffer_s/Fs,'OK','g',0)
   end
 end
-
+clf;
 fprintf('<strong>Save file?</strong>\n');
 disp('Press any key to continue.  ESC to cancel.');
 reply = getkey;

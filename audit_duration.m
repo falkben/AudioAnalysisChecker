@@ -58,7 +58,6 @@ for k=start_indx:length(audio_fnames)
           audit_single_channel(audio,trial_data,processed_audio_dir,...
             duration_fnames{dur_fname_indx})
         end
-        clf;
         disp(['Finished file ' num2str(k) ' of ' num2str(length(audio_fnames))]);
         fprintf('<strong>Continue with next file?</strong>\n');
         disp('Press ESC to cancel, any other key to continue')
