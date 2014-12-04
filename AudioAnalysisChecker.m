@@ -22,7 +22,7 @@ function varargout = AudioAnalysisChecker(varargin)
 
 % Edit the above text to modify the response to help AudioAnalysisChecker
 
-% Last Modified by GUIDE v2.5 22-Feb-2014 14:34:24
+% Last Modified by GUIDE v2.5 03-Dec-2014 14:10:39
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -505,10 +505,9 @@ end
 %plotting spectrogram:
 axes(handles.spect_axes);cla;
 if get(handles.plot_spectrogram_checkbox,'value')
-  [S,F,T,P] = spectrogram(X,256,230,[],Fs,'yaxis');
-  imagesc(T,F,10*log10(abs(P))); axis tight;
-  set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
-    num2str((0:25:125)'),'xticklabel','');
+  %we do the spectrogram over all the frequencies and then just set the axis limit to 125khz
+%   [~,F,T,P] = spectrogram(X,256,230,linspace(0,125e3,60),Fs); %slower alg.
+  [~,F,T,P] = spectrogram(X,256,230,[],Fs);
   
   %worrying about the clim for the spectrogram:
   max_db_str=num2str(round(max(max(10*log10(P)))));
@@ -518,11 +517,18 @@ if get(handles.plot_spectrogram_checkbox,'value')
   if get(handles.lock_range_checkbox,'value') == 1
     low_clim=str2double(get(handles.low_dB_edit,'string'));
     top_clim=str2double(get(handles.top_dB_edit,'string'));
-    set(gca,'clim',[low_clim top_clim]);
+%     set(gca,'clim',[low_clim top_clim]);
   else
     set(handles.top_dB_edit,'string',max_db_str);
     set(handles.low_dB_edit,'string',min_db_str);
   end
+  
+  imagesc(T,F,10*log10(abs(P)),[low_clim top_clim]);
+  axis tight;
+  a=axis;
+  axis([a(1:2) 0 125e3]);
+  set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
+    num2str((0:25:125)'),'xticklabel','');
   colormap('hot')
 end
 
@@ -1125,9 +1131,3 @@ if isequal(file,0)
 end
 
 audiowrite([path file],data./(max(abs(data))+.01),wavFs);
-
-
-
-
-
-
