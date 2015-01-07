@@ -241,6 +241,8 @@ if trialcode==0
   disp(display_text)
   add_text(handles,display_text);
   trialcode=handles.internal.audio_fname(1:end-4);
+  slashes=strfind(handles.internal.audio_pname,'\');
+  bat=handles.internal.audio_pname(slashes(end-1)+1:slashes(end)-1);
 end
 indx=find(strcmp(all_trialcodes,trialcode));
 
@@ -253,8 +255,15 @@ if length(indx)>1
   if isequal(ch,0)
     indx=[];
   end
-  [~,ia]=intersect([extracted_sound_data(indx).ch],ch);
-  indx=indx(ia);
+  
+  all_ch=[extracted_sound_data.ch];
+  all_bats={extracted_sound_data.bat};
+  
+  ia=find(all_ch==ch & strcmp(all_bats,bat) & strcmp(all_trialcodes,trialcode));
+  
+  if ~isempty(ia)
+    indx=ia;
+  end
 end
 
 if isempty(indx)
