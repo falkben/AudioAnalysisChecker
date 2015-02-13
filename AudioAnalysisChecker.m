@@ -449,9 +449,9 @@ elseif strcmp(selected_wave_axes,'Smoothed, rectified')
   data_square=smooth(ddf.^2,200);
   plot(t,data_square,'k','linewidth',2);
   axis tight;
+  a=axis;
+  axis([a(1:2) 0  max( data_square( t>=a(1) & t<=a(2) )  )]);
 end
-
-a=axis; %for plotting markings, net crosses
 
 %displaying markings:
 all_voc_times=handles.internal.DataArray;
