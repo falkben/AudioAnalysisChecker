@@ -261,9 +261,9 @@ if length(indx)>1
   
   ia=find(all_ch==ch & strcmp(all_bats,bat) & strcmp(all_trialcodes,trialcode));
   
-  if ~isempty(ia)
+%   if ~isempty(ia)
     indx=ia;
-  end
+%   end
 end
 
 if isempty(indx)
@@ -304,6 +304,13 @@ switch button
       return;
     end
     
+    FN=fieldnames(handles.sound_data);
+    trl_FN=fieldnames(trt_data);
+    missing_FN=setdiff(FN,trl_FN);
+    for ff=1:length(missing_FN)
+      eval(['trt_data.' missing_FN{ff} '=[];']);
+    end
+    
     handles.sound_data(end+1)=orderfields(trt_data,handles.sound_data);
     handles.sound_data_checksum=[];
     loaded=1;
@@ -332,6 +339,14 @@ switch button
       trt_data.sm_centroid=[];
       trt_data.speed=[];
       trt_data.treatment_type='';
+    end
+    
+    
+    FN=fieldnames(handles.sound_data);
+    trl_FN=fieldnames(trt_data);
+    missing_FN=setdiff(FN,trl_FN);
+    for ff=1:length(missing_FN)
+      eval(['trt_data.' missing_FN{ff} '=[];']);
     end
     
     handles.sound_data(end+1)=orderfields(trt_data,handles.sound_data);
