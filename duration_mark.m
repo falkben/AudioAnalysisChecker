@@ -49,10 +49,78 @@ end
 
 
 function update(handles)
+%updates the 3 axes
+
+call_num=handles.callnum;
+cur_ch=handles.data.proc.call(call_num).channel_marked;
+waveform=handles.data.filt_wav_noise{cur_ch};
+Fs=handles.data.Fs;
+buffer_s = round((2e-3).*Fs);
+buffer_e = round((2e-3).*Fs);
+onset=handles.data.proc.call(call_num).call_onset;
+offset=handles.data.proc.call(call_num).call_offset;
+if isnan(onset)
+  samp_s=handles.data.proc.call(call_num).locs-buffer_s*2;
+else
+  samp_s=max(1,onset-buffer_s);
+end
+if isnan(offset)
+  samp_e=handles.data.proc.call(call_num).locs+buffer_e*2;
+else
+  samp_e=min(offset+buffer_e,size(waveform,1));  
+end
+
+voc_p=waveform(samp_s:samp_e);
 
 
 
+axes(handles.context_axes);
+if ~isfield(handles.data,'plot_cur_wav') && ~isfield(handles.data,'prev_chan')...
+    || handles.data.prev_chan ~= cur_ch
+  cla;
+  t=(0:size(waveform,1)-1)/Fs;
+  plot(t,waveform);
+  axis tight;
+  hold on;
+else
+  delete(handles.data.plot_cur_wav);
+end
+if isfinite(onset) && isfinite(offset)
+  handles.data.plot_cur_wav=plot((onset:offset)'/Fs,...
+    waveform(onset:offset),'r');
+end
 
+
+axes(handles.wav_axes);
+plot((1:length(voc_p))./Fs,voc_p);
+hold on;
+if isfinite(onset)
+  plot([buffer_s buffer_s]./Fs,[min(voc_p) max(voc_p)],'r')
+end
+plot([buffer_s+offset-onset buffer_s+offset-onset]./Fs,...
+  [min(voc_p) max(voc_p)],'r')
+axis tight; hold off;
+
+axes(handles.spec_axes);
+[~,F,T,P] = spectrogram(voc_p,128,120,512,Fs);
+imagesc(T,F,10*log10(P)); set(gca,'YDir','normal');
+set(gca,'clim',[-95 -30]);
+%         colormap jet
+%         colorbar
+hold on;
+axis tight;
+aaa=axis;
+if isfinite(onset)
+  plot([buffer_s buffer_s]./Fs,[0 Fs/2],'r')
+end
+plot([buffer_s+offset-onset buffer_s+offset-onset]./Fs,...
+  [0 Fs/2],'r')
+hold off;
+
+handles.data.prev_chan=cur_ch;
+
+linkaxes([handles.wav_axes handles.spec_axes],'x');
+guidata(handles.figure1, handles)
 
 
 
@@ -159,6 +227,9 @@ function nav_next_button_Callback(hObject, eventdata, handles)
 % hObject    handle to nav_next_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+handles.callnum=min(handles.callnum+1,handles.calltot);
+guidata(hObject, handles);
+update(handles);
 
 
 % --- Executes on button press in nav_prev_button.
@@ -166,21 +237,27 @@ function nav_prev_button_Callback(hObject, eventdata, handles)
 % hObject    handle to nav_prev_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+handles.callnum=max(handles.callnum-1,1);
+guidata(hObject, handles);
+update(handles);
 
 % --- Executes on button press in nav_start_button.
 function nav_start_button_Callback(hObject, eventdata, handles)
 % hObject    handle to nav_start_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+handles.callnum=1;
+guidata(hObject, handles);
+update(handles);
 
 % --- Executes on button press in nav_last_button.
 function nav_last_button_Callback(hObject, eventdata, handles)
 % hObject    handle to nav_last_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+handles.callnum=handles.calltot;
+guidata(hObject, handles);
+update(handles);
 
 % --- Executes on button press in del_button.
 function del_button_Callback(hObject, eventdata, handles)
@@ -209,6 +286,9 @@ function loadfile_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+%determine if they want to save current file first
+
+
 %determine the type of file (wu-jung's mic_data_detect or my _processed file)
 if ispref('duration_mark_gui') && ispref('duration_mark_gui','micrecpath')
   pname=getpref('duration_mark_gui','micrecpath');
@@ -224,78 +304,80 @@ end
 fn=[pname,fname];
 setpref('duration_mark_gui','micrecpath',pname)
 
+handles.data=[];
 handles.data.proc=load(fn);
 
 noise_freq=str2double(get(handles.noise_freq_edit,'String'))*1e3;
 end_freq=str2double(get(handles.end_freq_edit,'String'))*1e3;
 start_freq=str2double(get(handles.start_freq_edit,'String'))*1e3;
 
-%wu_jung_format
+%wu_jung format
 if strfind(fn,'mic_data_detect')
   A=strsplit(fn,'_detect');
   data_fname=A{1};
   handles.data.wav=load([data_fname '.mat']);
   
   Fs=handles.data.wav.fs;
-  
-  ch_marked=unique([handles.data.proc.call(:).channel_marked]);
-  [handles.data.filt_wav_noise,handles.data.filt_wav_start,...
-    handles.data.filt_wav_start,handles.data.noise_high,...
-    handles.data.noise_low,handles.data.data_square,...
-    handles.data.data_square_high,handles.data.data_square_diff_high,...
-    handles.data.data_square_low,handles.data.data_square_diff_low]=...
-    deal(cell(handles.data.proc.num_ch_in_file,1));
-  
-  %doing filtering once on each channel, as opposed to repeatedly doing it
-  %for each call
-  for cc=ch_marked
-    waveform=handles.data.wav.sig(:,cc);
-    
-    %remove extraneous sounds below noise_freq
-    [b,a] = butter(6,noise_freq/(Fs/2),'high');
-    ddf=filtfilt(b,a,waveform); %freqz(b,a,SR/2,SR);
-    data_square = smooth((ddf.^2),100);
-    
-    %for marking the end time 
-    %we assume it's below 30k, removes some energy from echoes
-    [low_b, low_a]=butter(6,end_freq/(Fs/2),'low'); 
-    waveform_low=filtfilt(low_b,low_a,ddf); %using the previously high passed data
-    data_square_low=smooth((waveform_low.^2),100);
-
-    %for marking the start time
-    %we assume it's above 30k, removes some energy from previous vocs
-    [high_b, high_a]=butter(6,start_freq/(Fs/2),'high'); 
-    waveform_high=filtfilt(high_b,high_a,waveform); %just high pass it once time
-    data_square_high=smooth((waveform_high.^2),100);
-
-    noise_length = .001*Fs; %length of data for estimating noise (1ms)
-
-    data_square_diff_high = abs(smooth(diff(data_square_high),50));
-    noise_diff_high=...
-      median(max(reshape(data_square_diff_high(1:floor(length(data_square_diff_high)...
-      /noise_length)*noise_length),noise_length,[])));
-    data_square_diff_low = abs(smooth(diff(data_square_low),50));
-    noise_diff_low=...
-      median(max(reshape(data_square_diff_low(1:floor(length(data_square_diff_low)...
-      /noise_length)*noise_length),noise_length,[])));
-    
-    handles.data.filt_wav_noise{cc}=ddf;
-    handles.data.data_square{cc}=data_square;
-    
-    handles.data.filt_wav_start{cc}=waveform_high;
-    handles.data.data_square_high{cc}=data_square_high;
-    handles.data.data_square_diff_high{cc}=data_square_diff_high;
-    
-    handles.data.filt_wav_end{cc}=waveform_low;
-    handles.data.data_square_low{cc}=data_square_low;
-    handles.data.data_square_diff_low{cc}=data_square_diff_low;
-    
-    handles.data.noise_high{cc}=noise_diff_high;
-    handles.data.noise_low{cc}=noise_diff_low;
-  end
+  handles.data.Fs=Fs;
   %if durations haven't been marked already, run the automated duration
   %marking code
-  if ~isfield(handles.data.proc.call,'auto_mark')
+  if ~isfield(handles.data.proc.call,'call_onset')
+    %doing filtering once on each channel, as opposed to repeatedly doing it
+    %for each call
+    
+    ch_marked=unique([handles.data.proc.call(:).channel_marked]);
+    [handles.data.filt_wav_noise,handles.data.filt_wav_start,...
+      handles.data.filt_wav_start,handles.data.noise_high,...
+      handles.data.noise_low,handles.data.data_square,...
+      handles.data.data_square_high,handles.data.data_square_diff_high,...
+      handles.data.data_square_low,handles.data.data_square_diff_low]=...
+      deal(cell(handles.data.proc.num_ch_in_file,1));
+    for cc=ch_marked
+      waveform=handles.data.wav.sig(:,cc);
+
+      %remove extraneous sounds below noise_freq
+      [b,a] = butter(6,noise_freq/(Fs/2),'high');
+      ddf=filtfilt(b,a,waveform); %freqz(b,a,SR/2,SR);
+      data_square = smooth((ddf.^2),100);
+
+      %for marking the end time 
+      %we assume it's below 30k, removes some energy from echoes
+      [low_b, low_a]=butter(6,end_freq/(Fs/2),'low'); 
+      waveform_low=filtfilt(low_b,low_a,ddf); %using the previously high passed data
+      data_square_low=smooth((waveform_low.^2),100);
+
+      %for marking the start time
+      %we assume it's above 30k, removes some energy from previous vocs
+      [high_b, high_a]=butter(6,start_freq/(Fs/2),'high'); 
+      waveform_high=filtfilt(high_b,high_a,waveform); %just high pass it once time
+      data_square_high=smooth((waveform_high.^2),100);
+
+      noise_length = .001*Fs; %length of data for estimating noise (1ms)
+
+      data_square_diff_high = abs(smooth(diff(data_square_high),50));
+      noise_diff_high=...
+        median(max(reshape(data_square_diff_high(1:floor(length(data_square_diff_high)...
+        /noise_length)*noise_length),noise_length,[])));
+      data_square_diff_low = abs(smooth(diff(data_square_low),50));
+      noise_diff_low=...
+        median(max(reshape(data_square_diff_low(1:floor(length(data_square_diff_low)...
+        /noise_length)*noise_length),noise_length,[])));
+
+      handles.data.filt_wav_noise{cc}=ddf;
+      handles.data.data_square{cc}=data_square;
+
+      handles.data.filt_wav_start{cc}=waveform_high;
+      handles.data.data_square_high{cc}=data_square_high;
+      handles.data.data_square_diff_high{cc}=data_square_diff_high;
+
+      handles.data.filt_wav_end{cc}=waveform_low;
+      handles.data.data_square_low{cc}=data_square_low;
+      handles.data.data_square_diff_low{cc}=data_square_diff_low;
+
+      handles.data.noise_high{cc}=noise_diff_high;
+      handles.data.noise_low{cc}=noise_diff_low;
+    end
+    
     used_vocs = find([1, diff([handles.data.proc.call(:).locs]./Fs)>10e-3]);
     
     for vv=used_vocs
@@ -317,8 +399,11 @@ elseif strfind(fn,'mic_data_detect') %ben's format
 end
 
 %initialize
+handles.callnum=1;
+handles.calltot=length(handles.data.proc.call);
 
-update(handles)
+guidata(hObject, handles);
+update(handles);
 
 
 
@@ -337,6 +422,8 @@ function exit_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 %test whether we need to save
+
 %ask user to save if there are changes
+
 %close the figure
 close(handles.figure1)
