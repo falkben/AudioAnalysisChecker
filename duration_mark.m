@@ -56,9 +56,12 @@ call_num=handles.callnum;
 set(handles.call_num_edit,'string',num2str(call_num));
 set(handles.max_call,'string',num2str(handles.calltot));
 
+Fs=handles.data.Fs;
+PI=diff([handles.data.proc.call(:).locs])/Fs*1e3; %ms
+
 cur_ch=handles.data.proc.call(call_num).channel_marked;
 waveform=handles.data.filt_wav_noise{cur_ch};
-Fs=handles.data.Fs;
+
 buffer=str2double(get(handles.buffer_edit,'string'));
 buffer_s = round((buffer * 1e-3).*Fs);
 onset=handles.data.proc.call(call_num).onset;
@@ -125,6 +128,10 @@ end
 plot([buffer_s+offset-onset buffer_s+offset-onset]./Fs,...
   [0 Fs/2],'r')
 hold off;
+if call_num > 1 && PI(call_num-1)<10
+  text(buffer_s/3/Fs,Fs/2*.9,'BUZZ','fontsize',18,'color','r')
+end
+
 
 handles.data.prev_chan=cur_ch;
 
@@ -362,7 +369,8 @@ function mark_button_Callback(hObject, eventdata, handles)
 axes(handles.wav_axes);
 
 Fs=handles.data.wav.fs;
-buffer_s = round((2e-3)*Fs);
+buffer=str2double(get(handles.buffer_edit,'String'));
+buffer_s = round((buffer * 1e-3)*Fs);
 
 [x,~,button]=ginput(2);
 if isempty(x) || ismember(13,button) || length(x) < 2 %ignoring
@@ -383,8 +391,10 @@ else
     loc=handles.data.proc.call(handles.callnum).onset;
     buffer_mult=1;
   end
-  handles.data.proc.call(handles.callnum).onset = round(loc - buffer_s*buffer_mult + x(1)*Fs);
-  handles.data.proc.call(handles.callnum).offset = round(loc - buffer_s*buffer_mult + x(2)*Fs);
+  handles.data.proc.call(handles.callnum).onset = ...
+    round(loc - buffer_s*buffer_mult + x(1)*Fs);
+  handles.data.proc.call(handles.callnum).offset = ...
+    round(loc - buffer_s*buffer_mult + x(2)*Fs);
   handles.data.edited=1;
   guidata(hObject,handles);
   
@@ -407,7 +417,9 @@ function loadfile_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 %determine if they want to save current file first
-
+if save_before_discard(handles)
+  return;
+end
 
 %determine the type of file (wu-jung's mic_data_detect or my _processed file)
 if ispref('duration_mark_gui') && ispref('duration_mark_gui','micrecpath')
@@ -427,6 +439,7 @@ setpref('duration_mark_gui','micrecpath',pname)
 handles.data=[];
 handles.data.proc=load(fn);
 handles.data.edited=0;
+disp(['loading trial ' fname '...']);
 
 noise_freq=str2double(get(handles.noise_freq_edit,'String'))*1e3;
 end_freq=str2double(get(handles.end_freq_edit,'String'))*1e3;
@@ -532,6 +545,7 @@ end
 handles.callnum=1;
 handles.calltot=length(handles.data.proc.call);
 handles.data.fn=fn;
+set(gcf,'Name',['duration_mark: ' fname]);
 
 guidata(hObject, handles);
 update(handles);
@@ -556,7 +570,7 @@ function exit_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-closeGUI(handles);
+close_GUI(handles);
 
 
 
