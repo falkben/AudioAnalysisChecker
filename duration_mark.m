@@ -57,7 +57,12 @@ set(handles.call_num_edit,'string',num2str(call_num));
 set(handles.max_call,'string',num2str(handles.calltot));
 
 Fs=handles.data.Fs;
-PI=diff([handles.data.proc.call(:).locs])/Fs*1e3; %ms
+call_locs=[handles.data.proc.call(:).locs];
+PI=diff(call_locs)/Fs*1e3; %ms
+if isfield(handles.data,'pos_tstart')
+  indx_with_pos=find(call_locs > handles.data.pos_tstart*Fs & ...
+    call_locs < handles.data.pos_tend*Fs);
+end
 
 cur_ch=handles.data.proc.call(call_num).channel_marked;
 waveform=handles.data.filt_wav_noise{cur_ch};
@@ -67,12 +72,12 @@ buffer_s = round((buffer * 1e-3).*Fs);
 onset=handles.data.proc.call(call_num).onset;
 offset=handles.data.proc.call(call_num).offset;
 if isnan(onset)
-  samp_s=handles.data.proc.call(call_num).locs-buffer_s*2;
+  samp_s=max(1,handles.data.proc.call(call_num).locs-buffer_s*2);
 else
   samp_s=max(1,onset-buffer_s);
 end
 if isnan(offset)
-  samp_e=handles.data.proc.call(call_num).locs+buffer_s*2;
+  samp_e=min(handles.data.proc.call(call_num).locs+buffer_s*2,size(waveform,1));
 else
   samp_e=min(offset+buffer_s,size(waveform,1));  
 end
@@ -89,6 +94,12 @@ if ~isfield(handles.data,'plot_cur_wav') && ~isfield(handles.data,'prev_chan')..
   plot(t,waveform);
   axis tight;
   hold on;
+  if isfield(handles.data,'pos_tstart')
+    plot([handles.data.pos_tstart handles.data.pos_tstart],...
+      [min(waveform) max(waveform)],'--k','linewidth',1);
+    plot([handles.data.pos_tend handles.data.pos_tend],...
+      [min(waveform) max(waveform)],'--k','linewidth',1);
+  end
 elseif isfield(handles.data,'plot_cur_wav')
   delete(handles.data.plot_cur_wav);
 end
@@ -102,8 +113,22 @@ end
 if isfield(handles.data,'ch_txt_handle')
   delete(handles.data.ch_txt_handle);
 end
-handle.data.ch_txt_handle=text(.025*size(waveform,1)/Fs,.8*range(waveform(waveform>0)),...
-  ['ch:' num2str(cur_ch)],'fontsize',12,'color','r');
+handles.data.ch_txt_handle=text(.025*size(waveform,1)/Fs,.8*range(waveform(waveform>0)),...
+  ['ch:' num2str(cur_ch)],'fontsize',12,'color','k');
+if isfield(handles.data,'pos_txt_handle')
+  delete(handles.data.pos_txt_handle);
+end
+if isfield(handles.data,'pos_tstart')
+  if ismember(call_num,indx_with_pos)
+    handles.data.pos_txt_handle=text(.975*size(waveform,1)/Fs,...
+      .8*range(waveform(waveform>0)),...
+      'In pos file','fontsize',12,'color','b','horizontalalignment','right');
+  else
+    handles.data.pos_txt_handle=text(.975*size(waveform,1)/Fs,...
+      .8*range(waveform(waveform>0)),...
+      'Out pos file','fontsize',12,'color','r','horizontalalignment','right');
+  end
+end
 
 
 axes(handles.wav_axes);
@@ -443,7 +468,30 @@ end
 fn=[pname,fname];
 setpref('duration_mark_gui','micrecpath',pname)
 
+%load in the vicon data for trial start and end times
+if ispref('duration_mark_gui') && ispref('duration_mark_gui','viconrecpath')
+  pos_pname=getpref('duration_mark_gui','viconrecpath');
+else
+  pos_pname='';
+end
+pos_pname=uigetdir(pos_pname,'Select path for bat 3D position');
+if isequal(pos_pname,0)
+  return;
+end
+setpref('duration_mark_gui','viconrecpath',pos_pname)
+pos_fn=get_vicon_trialcode_from_data_detect(fname);
+
 handles.data=[];
+
+if exist([pos_pname '\' pos_fn],'file')
+  load([pos_pname '\' pos_fn])
+  if ~exist('frame_rate','var')
+    frame_rate=200;
+  end
+  handles.data.pos_tstart=find(isfinite(bat_pos{1}(:,1)),1)/frame_rate;
+  handles.data.pos_tend=find(isfinite(bat_pos{1}(:,1)),1,'last')/frame_rate;
+end
+
 handles.data.proc=load(fn);
 handles.data.edited=0;
 disp([datestr(now,'HH:MM AM') ': Loading trial ' fname '...']);
@@ -486,12 +534,18 @@ if strfind(fn,'mic_data_detect')
       handles.data.filt_wav_noise{cc}=filtfilt(b,a,waveform); %freqz(b,a,SR/2,SR);
     end
     data_ch=[handles.data.filt_wav_noise{:}];
-    used_vocs = find([1, diff([handles.data.proc.call(:).locs]./Fs)>10e-3]);
+    call_locs=[handles.data.proc.call(:).locs];
+    used_vocs = find([1, diff(call_locs./Fs)>10e-3]);
+    if isfield(handles.data,'pos_tstart')
+      indx_with_pos=find(call_locs > handles.data.pos_tstart*Fs & ...
+        call_locs < handles.data.pos_tend*Fs);
+      used_vocs = intersect(used_vocs, indx_with_pos);
+    end
     for vv=used_vocs
       loc=handles.data.proc.call(vv).locs;
       buffer=10e-3*Fs;
-      [MM,max_loc_each_ch]=max(data_ch(max(1,loc-buffer):...
-        min(loc+buffer,size(data_ch,1)),:));
+      [MM,max_loc_each_ch]=max(abs(data_ch(max(1,loc-buffer):...
+        min(loc+buffer,size(data_ch,1)),:)));
       [~,cc]=max(MM);
       
       handles.data.proc.call(vv).locs=max_loc_each_ch(cc)+loc-buffer;
