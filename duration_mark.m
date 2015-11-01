@@ -99,6 +99,11 @@ else
   handles.data.plot_cur_wav=plot((samp_s:samp_e)'/Fs,...
     waveform(samp_s:samp_e),'r');
 end
+if isfield(handles.data,'ch_txt_handle')
+  delete(handles.data.ch_txt_handle);
+end
+handle.data.ch_txt_handle=text(.025*size(waveform,1)/Fs,.8*range(waveform(waveform>0)),...
+  ['ch:' num2str(cur_ch)],'fontsize',12,'color','r');
 
 
 axes(handles.wav_axes);
@@ -178,7 +183,7 @@ end
 function saved=save_trial(handles)
 saved=0;
 if ~isfield(handles,'data') 
-  disp('Nothing to save')
+  disp([datestr(now,'HH:MM AM') ': Nothing to save'])
   return;
 end
 
@@ -190,13 +195,15 @@ B=num2cell([calldata.offset]);
 calldata=rmfield(calldata,'onset');
 calldata=rmfield(calldata,'offset');
 
-% fn=handles.data.fn;
-% m=matfile(fn,'Writable',true);
-% m.call = calldata;
-% m.dur_marked=1;
-% m.dur_marks_timestamp=now;
+fn=handles.data.fn;
+m=matfile(fn,'Writable',true);
+m.call = calldata;
+m.dur_marked=1;
+m.dur_marked_timestamp=now;
 
-
+[~,fname]=fileparts(fn);
+disp([datestr(now,'HH:MM AM') ': Saved ' fname])
+saved=1;
 
 
 
@@ -374,11 +381,11 @@ buffer_s = round((buffer * 1e-3)*Fs);
 
 [x,~,button]=ginput(2);
 if isempty(x) || ismember(13,button) || length(x) < 2 %ignoring
-  disp('Ignoring voc');
+  disp([datestr(now,'HH:MM AM') ': Ignoring voc']);
   return
 %   voc_status(hh,buffer_s/Fs,'X','r',.1)
 elseif diff(x)<0
-  disp('Error clicks not in order, ignoring voc')
+  disp([datestr(now,'HH:MM AM') ': Error clicks not in order, ignoring voc'])
   return
 %   voc_status(hh,buffer_s/Fs,'X','r',.1)
 elseif ismember(27,button) %ESC
@@ -439,7 +446,7 @@ setpref('duration_mark_gui','micrecpath',pname)
 handles.data=[];
 handles.data.proc=load(fn);
 handles.data.edited=0;
-disp(['loading trial ' fname '...']);
+disp([datestr(now,'HH:MM AM') ': Loading trial ' fname '...']);
 
 noise_freq=str2double(get(handles.noise_freq_edit,'String'))*1e3;
 end_freq=str2double(get(handles.end_freq_edit,'String'))*1e3;
@@ -459,7 +466,6 @@ if strfind(fn,'mic_data_detect')
     %doing filtering once on each channel, as opposed to repeatedly doing it
     %for each call
     handles.data.edited=1;
-    ch_marked=unique([handles.data.proc.call(:).channel_marked]);
     [handles.data.filt_wav_noise,handles.data.filt_wav_start,...
       handles.data.filt_wav_start,handles.data.noise_high,...
       handles.data.noise_low,handles.data.data_square,...
@@ -472,10 +478,30 @@ if strfind(fn,'mic_data_detect')
     [low_b, low_a]=butter(6,end_freq/(Fs/2),'low'); 
     %we assume it's above 30k, removes some energy from previous vocs
     [high_b, high_a]=butter(6,start_freq/(Fs/2),'high'); 
-    for cc=ch_marked
+    
+    %determining the max sig on each channel and only processing those
+    %channels of recordings
+    for cc=1:handles.data.proc.num_ch_in_file
+      waveform=handles.data.wav.sig(:,cc);
+      handles.data.filt_wav_noise{cc}=filtfilt(b,a,waveform); %freqz(b,a,SR/2,SR);
+    end
+    data_ch=[handles.data.filt_wav_noise{:}];
+    used_vocs = find([1, diff([handles.data.proc.call(:).locs]./Fs)>10e-3]);
+    for vv=used_vocs
+      loc=handles.data.proc.call(vv).locs;
+      buffer=10e-3*Fs;
+      [MM,max_loc_each_ch]=max(data_ch(max(1,loc-buffer):...
+        min(loc+buffer,size(data_ch,1)),:));
+      [~,cc]=max(MM);
+      
+      handles.data.proc.call(vv).locs=max_loc_each_ch(cc)+loc-buffer;
+      handles.data.proc.call(vv).channel_marked=cc;
+    end
+    
+    for cc=unique([handles.data.proc.call(:).channel_marked])
       waveform=handles.data.wav.sig(:,cc);
 
-      ddf=filtfilt(b,a,waveform); %freqz(b,a,SR/2,SR);
+      ddf=handles.data.filt_wav_noise{cc};
       data_square = smooth((ddf.^2),100);
 
       %for marking the end time 
@@ -514,7 +540,6 @@ if strfind(fn,'mic_data_detect')
     
     [handles.data.proc.call(:).onset]=deal(nan);
     [handles.data.proc.call(:).offset]=deal(nan);    
-    used_vocs = find([1, diff([handles.data.proc.call(:).locs]./Fs)>10e-3]);
     
     warning('off','signal:findpeaks:largeMinPeakHeight')
     for vv=used_vocs
@@ -528,6 +553,10 @@ if strfind(fn,'mic_data_detect')
         handles.data.noise_low{cc},handles.data.data_square{cc},...
         handles.data.data_square_high{cc},handles.data.data_square_diff_high{cc},...
         handles.data.data_square_low{cc},handles.data.data_square_diff_low{cc},0,0);
+      if ~isnan(handles.data.proc.call(vv).onset)
+        handles.data.proc.call(vv).locs=loc;
+        handles.data.proc.call(vv).channel_marked=cc;
+      end
     end
     warning('on','signal:findpeaks:largeMinPeakHeight')
   else
@@ -547,6 +576,7 @@ handles.calltot=length(handles.data.proc.call);
 handles.data.fn=fn;
 set(gcf,'Name',['duration_mark: ' fname]);
 
+disp([datestr(now,'HH:MM AM') ': --- Loaded'])
 guidata(hObject, handles);
 update(handles);
 
