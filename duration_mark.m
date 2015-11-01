@@ -22,7 +22,7 @@ function varargout = duration_mark(varargin)
 
 % Edit the above text to modify the response to help duration_mark
 
-% Last Modified by GUIDE v2.5 30-Oct-2015 13:36:32
+% Last Modified by GUIDE v2.5 01-Nov-2015 14:10:19
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -435,6 +435,77 @@ else
 end
 update(handles);
 
+
+% --- Executes on button press in mark_beg_button.
+function mark_beg_button_Callback(hObject, eventdata, handles)
+% hObject    handle to mark_beg_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isnan(handles.data.proc.call(handles.callnum).onset)
+  disp([datestr(now,'HH:MM AM') ': Need marks to edit']);
+  return;
+end
+
+axes(handles.wav_axes);
+
+Fs=handles.data.wav.fs;
+buffer=str2double(get(handles.buffer_edit,'String'));
+buffer_s = round((buffer * 1e-3)*Fs);
+
+[x,~,button]=ginput(1);
+if isempty(x) || ismember(13,button) %ignoring
+  disp([datestr(now,'HH:MM AM') ': Ignoring voc']);
+  return
+%   voc_status(hh,buffer_s/Fs,'X','r',.1)
+elseif ismember(27,button) %ESC
+  return;
+else
+  loc=handles.data.proc.call(handles.callnum).onset;
+  handles.data.proc.call(handles.callnum).onset = ...
+    round(loc - buffer_s + x*Fs);
+  handles.data.edited=1;
+  guidata(hObject,handles);
+  
+%   new_duration_data(vv,:) = [voc_time voc_s voc_e];
+%   voc_status(hh,buffer_s/Fs,'OK','g',0)
+end
+update(handles);
+
+% --- Executes on button press in mark_end_button.
+function mark_end_button_Callback(hObject, eventdata, handles)
+% hObject    handle to mark_end_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isnan(handles.data.proc.call(handles.callnum).offset)
+  disp([datestr(now,'HH:MM AM') ': Need marks to edit']);
+  return;
+end
+
+axes(handles.wav_axes);
+
+Fs=handles.data.wav.fs;
+buffer=str2double(get(handles.buffer_edit,'String'));
+buffer_s = round((buffer * 1e-3)*Fs);
+
+[x,~,button]=ginput(1);
+if isempty(x) || ismember(13,button) %ignoring
+  disp([datestr(now,'HH:MM AM') ': Ignoring voc']);
+  return
+%   voc_status(hh,buffer_s/Fs,'X','r',.1)
+elseif ismember(27,button) %ESC
+  return;
+else
+  loc=handles.data.proc.call(handles.callnum).onset;
+  handles.data.proc.call(handles.callnum).offset = ...
+    round(loc - buffer_s + x*Fs);
+  handles.data.edited=1;
+  guidata(hObject,handles);
+  
+%   new_duration_data(vv,:) = [voc_time voc_s voc_e];
+%   voc_status(hh,buffer_s/Fs,'OK','g',0)
+end
+update(handles);
+
 % --------------------------------------------------------------------
 function filemenu_Callback(hObject, eventdata, handles)
 % hObject    handle to filemenu (see GCBO)
@@ -490,6 +561,8 @@ if exist([pos_pname '\' pos_fn],'file')
   end
   handles.data.pos_tstart=find(isfinite(bat_pos{1}(:,1)),1)/frame_rate;
   handles.data.pos_tend=find(isfinite(bat_pos{1}(:,1)),1,'last')/frame_rate;
+else
+  disp([datestr(now,'HH:MM AM') ': Couldn''t find matching position file: ' pos_fn]);
 end
 
 handles.data.proc=load(fn);
