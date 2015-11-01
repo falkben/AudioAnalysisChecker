@@ -27,19 +27,19 @@ function varargout = duration_mark(varargin)
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @duration_mark_OpeningFcn, ...
-                   'gui_OutputFcn',  @duration_mark_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+  'gui_Singleton',  gui_Singleton, ...
+  'gui_OpeningFcn', @duration_mark_OpeningFcn, ...
+  'gui_OutputFcn',  @duration_mark_OutputFcn, ...
+  'gui_LayoutFcn',  [] , ...
+  'gui_Callback',   []);
 if nargin && ischar(varargin{1})
-    gui_State.gui_Callback = str2func(varargin{1});
+  gui_State.gui_Callback = str2func(varargin{1});
 end
 
 if nargout
-    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+  [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
 else
-    gui_mainfcn(gui_State, varargin{:});
+  gui_mainfcn(gui_State, varargin{:});
 end
 % End initialization code - DO NOT EDIT
 
@@ -79,7 +79,7 @@ end
 if isnan(offset)
   samp_e=min(handles.data.proc.call(call_num).locs+buffer_s*2,size(waveform,1));
 else
-  samp_e=min(offset+buffer_s,size(waveform,1));  
+  samp_e=min(offset+buffer_s,size(waveform,1));
 end
 
 voc_p=waveform(samp_s:samp_e);
@@ -207,7 +207,7 @@ end
 
 function saved=save_trial(handles)
 saved=0;
-if ~isfield(handles,'data') 
+if ~isfield(handles,'data')
   disp([datestr(now,'HH:MM AM') ': Nothing to save'])
   return;
 end
@@ -266,7 +266,7 @@ guidata(hObject, handles);
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = duration_mark_OutputFcn(hObject, eventdata, handles) 
+function varargout = duration_mark_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -295,7 +295,7 @@ function noise_freq_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -318,7 +318,7 @@ function start_freq_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -341,7 +341,7 @@ function end_freq_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -408,11 +408,11 @@ buffer_s = round((buffer * 1e-3)*Fs);
 if isempty(x) || ismember(13,button) || length(x) < 2 %ignoring
   disp([datestr(now,'HH:MM AM') ': Ignoring voc']);
   return
-%   voc_status(hh,buffer_s/Fs,'X','r',.1)
+  %   voc_status(hh,buffer_s/Fs,'X','r',.1)
 elseif diff(x)<0
   disp([datestr(now,'HH:MM AM') ': Error clicks not in order, ignoring voc'])
   return
-%   voc_status(hh,buffer_s/Fs,'X','r',.1)
+  %   voc_status(hh,buffer_s/Fs,'X','r',.1)
 elseif ismember(27,button) %ESC
   return;
 else
@@ -430,8 +430,8 @@ else
   handles.data.edited=1;
   guidata(hObject,handles);
   
-%   new_duration_data(vv,:) = [voc_time voc_s voc_e];
-%   voc_status(hh,buffer_s/Fs,'OK','g',0)
+  %   new_duration_data(vv,:) = [voc_time voc_s voc_e];
+  %   voc_status(hh,buffer_s/Fs,'OK','g',0)
 end
 update(handles);
 
@@ -456,7 +456,7 @@ buffer_s = round((buffer * 1e-3)*Fs);
 if isempty(x) || ismember(13,button) %ignoring
   disp([datestr(now,'HH:MM AM') ': Ignoring voc']);
   return
-%   voc_status(hh,buffer_s/Fs,'X','r',.1)
+  %   voc_status(hh,buffer_s/Fs,'X','r',.1)
 elseif ismember(27,button) %ESC
   return;
 else
@@ -466,8 +466,8 @@ else
   handles.data.edited=1;
   guidata(hObject,handles);
   
-%   new_duration_data(vv,:) = [voc_time voc_s voc_e];
-%   voc_status(hh,buffer_s/Fs,'OK','g',0)
+  %   new_duration_data(vv,:) = [voc_time voc_s voc_e];
+  %   voc_status(hh,buffer_s/Fs,'OK','g',0)
 end
 update(handles);
 
@@ -491,7 +491,7 @@ buffer_s = round((buffer * 1e-3)*Fs);
 if isempty(x) || ismember(13,button) %ignoring
   disp([datestr(now,'HH:MM AM') ': Ignoring voc']);
   return
-%   voc_status(hh,buffer_s/Fs,'X','r',.1)
+  %   voc_status(hh,buffer_s/Fs,'X','r',.1)
 elseif ismember(27,button) %ESC
   return;
 else
@@ -501,8 +501,8 @@ else
   handles.data.edited=1;
   guidata(hObject,handles);
   
-%   new_duration_data(vv,:) = [voc_time voc_s voc_e];
-%   voc_status(hh,buffer_s/Fs,'OK','g',0)
+  %   new_duration_data(vv,:) = [voc_time voc_s voc_e];
+  %   voc_status(hh,buffer_s/Fs,'OK','g',0)
 end
 update(handles);
 
@@ -567,7 +567,7 @@ end
 
 handles.data.proc=load(fn);
 handles.data.edited=0;
-disp([datestr(now,'HH:MM AM') ': Loading trial ' fname '...']);
+disp([datestr(now,'HH:MM AM') ': Loading ' fname '...']);
 
 noise_freq=str2double(get(handles.noise_freq_edit,'String'))*1e3;
 end_freq=str2double(get(handles.end_freq_edit,'String'))*1e3;
@@ -581,93 +581,97 @@ if strfind(fn,'mic_data_detect')
   
   Fs=handles.data.wav.fs;
   handles.data.Fs=Fs;
-  %if durations haven't been marked already, run the automated duration
-  %marking code
+  [handles.data.filt_wav_noise,handles.data.filt_wav_start,...
+    handles.data.filt_wav_start,handles.data.noise_high,...
+    handles.data.noise_low,handles.data.data_square,...
+    handles.data.data_square_high,handles.data.data_square_diff_high,...
+    handles.data.data_square_low,handles.data.data_square_diff_low]=...
+    deal(cell(handles.data.proc.num_ch_in_file,1));
+  %remove extraneous sounds below noise_freq
+  [b,a] = butter(6,noise_freq/(Fs/2),'high');
+  %we assume it's below 30k, removes some energy from echoes
+  [low_b, low_a]=butter(6,end_freq/(Fs/2),'low');
+  %we assume it's above 30k, removes some energy from previous vocs
+  [high_b, high_a]=butter(6,start_freq/(Fs/2),'high');
+  
+  for cc=1:handles.data.proc.num_ch_in_file
+    waveform=handles.data.wav.sig(:,cc);
+    handles.data.filt_wav_noise{cc}=filtfilt(b,a,waveform); %freqz(b,a,SR/2,SR);
+  end
+  data_ch=[handles.data.filt_wav_noise{:}];
+  call_locs=[handles.data.proc.call(:).locs];
+  used_vocs = find([1, diff(call_locs./Fs)>10e-3]);
+  if isfield(handles.data,'pos_tstart')
+    indx_with_pos=find(call_locs > handles.data.pos_tstart*Fs & ...
+      call_locs < handles.data.pos_tend*Fs);
+    used_vocs = intersect(used_vocs, indx_with_pos);
+  end
+  
   if ~isfield(handles.data.proc,'dur_marked') || ~handles.data.proc.dur_marked
-    %doing filtering once on each channel, as opposed to repeatedly doing it
-    %for each call
     handles.data.edited=1;
-    [handles.data.filt_wav_noise,handles.data.filt_wav_start,...
-      handles.data.filt_wav_start,handles.data.noise_high,...
-      handles.data.noise_low,handles.data.data_square,...
-      handles.data.data_square_high,handles.data.data_square_diff_high,...
-      handles.data.data_square_low,handles.data.data_square_diff_low]=...
-      deal(cell(handles.data.proc.num_ch_in_file,1));
-    %remove extraneous sounds below noise_freq
-    [b,a] = butter(6,noise_freq/(Fs/2),'high');
-    %we assume it's below 30k, removes some energy from echoes
-    [low_b, low_a]=butter(6,end_freq/(Fs/2),'low'); 
-    %we assume it's above 30k, removes some energy from previous vocs
-    [high_b, high_a]=butter(6,start_freq/(Fs/2),'high'); 
-    
     %determining the max sig on each channel and only processing those
     %channels of recordings
-    for cc=1:handles.data.proc.num_ch_in_file
-      waveform=handles.data.wav.sig(:,cc);
-      handles.data.filt_wav_noise{cc}=filtfilt(b,a,waveform); %freqz(b,a,SR/2,SR);
-    end
-    data_ch=[handles.data.filt_wav_noise{:}];
-    call_locs=[handles.data.proc.call(:).locs];
-    used_vocs = find([1, diff(call_locs./Fs)>10e-3]);
-    if isfield(handles.data,'pos_tstart')
-      indx_with_pos=find(call_locs > handles.data.pos_tstart*Fs & ...
-        call_locs < handles.data.pos_tend*Fs);
-      used_vocs = intersect(used_vocs, indx_with_pos);
-    end
     for vv=used_vocs
       loc=handles.data.proc.call(vv).locs;
       buffer=10e-3*Fs;
       [MM,max_loc_each_ch]=max(abs(data_ch(max(1,loc-buffer):...
         min(loc+buffer,size(data_ch,1)),:)));
       [~,cc]=max(MM);
-      
+
       handles.data.proc.call(vv).locs=max_loc_each_ch(cc)+loc-buffer;
       handles.data.proc.call(vv).channel_marked=cc;
     end
+  end
+  
+  
+  %doing filtering once on each channel, as opposed to repeatedly doing it
+  %for each call
+  for cc=unique([handles.data.proc.call(:).channel_marked])
+    waveform=handles.data.wav.sig(:,cc);
     
-    for cc=unique([handles.data.proc.call(:).channel_marked])
-      waveform=handles.data.wav.sig(:,cc);
-
-      ddf=handles.data.filt_wav_noise{cc};
-      data_square = smooth((ddf.^2),100);
-
-      %for marking the end time 
-      waveform_low=filtfilt(low_b,low_a,ddf); %using the previously high passed data
-      data_square_low=smooth((waveform_low.^2),100);
-
-      %for marking the start time
-      waveform_high=filtfilt(high_b,high_a,waveform); %just high pass it once time
-      data_square_high=smooth((waveform_high.^2),100);
-
-      noise_length = .001*Fs; %length of data for estimating noise (1ms)
-
-      data_square_diff_high = abs(smooth(diff(data_square_high),50));
-      noise_diff_high=...
-        median(max(reshape(data_square_diff_high(1:floor(length(data_square_diff_high)...
-        /noise_length)*noise_length),noise_length,[])));
-      data_square_diff_low = abs(smooth(diff(data_square_low),50));
-      noise_diff_low=...
-        median(max(reshape(data_square_diff_low(1:floor(length(data_square_diff_low)...
-        /noise_length)*noise_length),noise_length,[])));
-
-      handles.data.filt_wav_noise{cc}=ddf;
-      handles.data.data_square{cc}=data_square;
-
-      handles.data.filt_wav_start{cc}=waveform_high;
-      handles.data.data_square_high{cc}=data_square_high;
-      handles.data.data_square_diff_high{cc}=data_square_diff_high;
-
-      handles.data.filt_wav_end{cc}=waveform_low;
-      handles.data.data_square_low{cc}=data_square_low;
-      handles.data.data_square_diff_low{cc}=data_square_diff_low;
-
-      handles.data.noise_high{cc}=noise_diff_high;
-      handles.data.noise_low{cc}=noise_diff_low;
-    end
+    ddf=handles.data.filt_wav_noise{cc};
+    data_square = smooth((ddf.^2),100);
     
+    %for marking the end time
+    waveform_low=filtfilt(low_b,low_a,ddf); %using the previously high passed data
+    data_square_low=smooth((waveform_low.^2),100);
+    
+    %for marking the start time
+    waveform_high=filtfilt(high_b,high_a,waveform); %just high pass it once time
+    data_square_high=smooth((waveform_high.^2),100);
+    
+    noise_length = .001*Fs; %length of data for estimating noise (1ms)
+    
+    data_square_diff_high = abs(smooth(diff(data_square_high),50));
+    noise_diff_high=...
+      median(max(reshape(data_square_diff_high(1:floor(length(data_square_diff_high)...
+      /noise_length)*noise_length),noise_length,[])));
+    data_square_diff_low = abs(smooth(diff(data_square_low),50));
+    noise_diff_low=...
+      median(max(reshape(data_square_diff_low(1:floor(length(data_square_diff_low)...
+      /noise_length)*noise_length),noise_length,[])));
+    
+    handles.data.filt_wav_noise{cc}=ddf;
+    handles.data.data_square{cc}=data_square;
+    
+    handles.data.filt_wav_start{cc}=waveform_high;
+    handles.data.data_square_high{cc}=data_square_high;
+    handles.data.data_square_diff_high{cc}=data_square_diff_high;
+    
+    handles.data.filt_wav_end{cc}=waveform_low;
+    handles.data.data_square_low{cc}=data_square_low;
+    handles.data.data_square_diff_low{cc}=data_square_diff_low;
+    
+    handles.data.noise_high{cc}=noise_diff_high;
+    handles.data.noise_low{cc}=noise_diff_low;
+  end
+  
+  %if durations haven't been marked already, run the automated duration
+  %marking code
+  if ~isfield(handles.data.proc,'dur_marked') || ~handles.data.proc.dur_marked
+    handles.data.edited=1;
     [handles.data.proc.call(:).onset]=deal(nan);
-    [handles.data.proc.call(:).offset]=deal(nan);    
-    
+    [handles.data.proc.call(:).offset]=deal(nan);
     warning('off','signal:findpeaks:largeMinPeakHeight')
     for vv=used_vocs
       loc=handles.data.proc.call(vv).locs;
@@ -750,7 +754,7 @@ function clim_upper_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -773,7 +777,7 @@ function clim_lower_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -798,7 +802,7 @@ function call_num_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -821,7 +825,7 @@ function max_call_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
 
 
@@ -858,5 +862,5 @@ function buffer_edit_CreateFcn(hObject, eventdata, handles)
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+  set(hObject,'BackgroundColor','white');
 end
