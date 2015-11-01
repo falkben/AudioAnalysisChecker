@@ -84,7 +84,7 @@ if ~manual && pk > .005
       find_thresh_crossing(data_square_low_voc(loc:end),...
       thresh2,loc,'first',smooth_der_voc_low,thresh_low_noise);
   catch
-    disp(num2str)
+    disp('something went wrong')
   end
 end
 
