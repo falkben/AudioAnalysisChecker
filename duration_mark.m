@@ -22,7 +22,7 @@ function varargout = duration_mark(varargin)
 
 % Edit the above text to modify the response to help duration_mark
 
-% Last Modified by GUIDE v2.5 01-Nov-2015 14:10:19
+% Last Modified by GUIDE v2.5 02-Nov-2015 14:08:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -51,10 +51,10 @@ end
 function update(handles)
 %updates the 3 axes
 
-call_num=handles.callnum;
+call_num=handles.data.callnum;
 
 set(handles.call_num_edit,'string',num2str(call_num));
-set(handles.max_call,'string',num2str(handles.calltot));
+set(handles.max_call,'string',num2str(handles.data.calltot));
 
 Fs=handles.data.Fs;
 call_locs=[handles.data.proc.call(:).locs];
@@ -103,6 +103,18 @@ if ~isfield(handles.data,'plot_cur_wav') && ~isfield(handles.data,'prev_chan')..
 elseif isfield(handles.data,'plot_cur_wav')
   delete(handles.data.plot_cur_wav);
 end
+if ~isfield(handles.data,'plot_cur_wav') && ~isfield(handles.data,'prev_chan')...
+    || handles.data.prev_chan ~= cur_ch || ...
+    isfield(handles.data,'prev_calltot') && ...
+    handles.data.prev_calltot ~= handles.data.calltot
+  if isfield(handles.data,'callnumtxt')
+    delete(handles.data.callnumtxt);
+  end
+  handles.data.callnumtxt=text(call_locs./Fs,repmat(min(waveform),size(call_locs)),...
+    num2str((1:length(call_locs))'),'fontsize',6,'horizontalalignment','center',...
+    'verticalalignment','bottom');
+end
+
 if isfinite(onset) && isfinite(offset)
   handles.data.plot_cur_wav=plot((onset:offset)'/Fs,...
     waveform(onset:offset),'r');
@@ -161,7 +173,12 @@ hold off;
 if call_num > 1 && PI(call_num-1)<10
   text(buffer_s/3/Fs,Fs/2*.9,'BUZZ','fontsize',18,'color','r')
 end
-
+if isfield(handles.data,'pos_tstart')
+  if ~ismember(call_num,indx_with_pos)
+    text((samp_e-samp_s-buffer_s/2)/Fs,Fs/2*.9,...
+      'Out pos file','fontsize',12,'color','r','horizontalalignment','right');
+  end
+end
 
 handles.data.prev_chan=cur_ch;
 
@@ -350,7 +367,7 @@ function nav_next_button_Callback(hObject, eventdata, handles)
 % hObject    handle to nav_next_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.callnum=min(handles.callnum+1,handles.calltot);
+handles.data.callnum=min(handles.data.callnum+1,handles.data.calltot);
 guidata(hObject, handles);
 update(handles);
 
@@ -360,7 +377,7 @@ function nav_prev_button_Callback(hObject, eventdata, handles)
 % hObject    handle to nav_prev_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.callnum=max(handles.callnum-1,1);
+handles.data.callnum=max(handles.data.callnum-1,1);
 guidata(hObject, handles);
 update(handles);
 
@@ -369,7 +386,7 @@ function nav_start_button_Callback(hObject, eventdata, handles)
 % hObject    handle to nav_start_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.callnum=1;
+handles.data.callnum=1;
 guidata(hObject, handles);
 update(handles);
 
@@ -378,7 +395,7 @@ function nav_last_button_Callback(hObject, eventdata, handles)
 % hObject    handle to nav_last_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.callnum=handles.calltot;
+handles.data.callnum=handles.data.calltot;
 guidata(hObject, handles);
 update(handles);
 
@@ -387,11 +404,18 @@ function del_button_Callback(hObject, eventdata, handles)
 % hObject    handle to del_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.data.proc.call(handles.callnum).onset=NaN;
-handles.data.proc.call(handles.callnum).offset=NaN;
+handles.data.proc.call(handles.data.callnum).onset=NaN;
+handles.data.proc.call(handles.data.callnum).offset=NaN;
 handles.data.edited=1;
+handles=check_for_advance(handles);
 guidata(hObject,handles);
 update(handles)
+
+
+function handles=check_for_advance(handles)
+if get(handles.adv_next_checkbox,'value')
+  handles.data.callnum=min(handles.data.callnum+1,handles.data.calltot);
+end
 
 % --- Executes on button press in mark_button.
 function mark_button_Callback(hObject, eventdata, handles)
@@ -415,24 +439,22 @@ elseif diff(x)<0
   %   voc_status(hh,buffer_s/Fs,'X','r',.1)
 elseif ismember(27,button) %ESC
   return;
-else
-  if isnan(handles.data.proc.call(handles.callnum).onset)
-    loc=handles.data.proc.call(handles.callnum).locs;
-    buffer_mult=2;
-  else
-    loc=handles.data.proc.call(handles.callnum).onset;
-    buffer_mult=1;
-  end
-  handles.data.proc.call(handles.callnum).onset = ...
-    round(loc - buffer_s*buffer_mult + x(1)*Fs);
-  handles.data.proc.call(handles.callnum).offset = ...
-    round(loc - buffer_s*buffer_mult + x(2)*Fs);
-  handles.data.edited=1;
-  guidata(hObject,handles);
-  
-  %   new_duration_data(vv,:) = [voc_time voc_s voc_e];
-  %   voc_status(hh,buffer_s/Fs,'OK','g',0)
 end
+
+if isnan(handles.data.proc.call(handles.data.callnum).onset)
+  loc=handles.data.proc.call(handles.data.callnum).locs;
+  buffer_mult=2;
+else
+  loc=handles.data.proc.call(handles.data.callnum).onset;
+  buffer_mult=1;
+end
+handles.data.proc.call(handles.data.callnum).onset = ...
+  round(loc - buffer_s*buffer_mult + x(1)*Fs);
+handles.data.proc.call(handles.data.callnum).offset = ...
+  round(loc - buffer_s*buffer_mult + x(2)*Fs);
+handles.data.edited=1;
+handles=check_for_advance(handles);
+guidata(hObject,handles);
 update(handles);
 
 
@@ -441,7 +463,7 @@ function mark_beg_button_Callback(hObject, eventdata, handles)
 % hObject    handle to mark_beg_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if isnan(handles.data.proc.call(handles.callnum).onset)
+if isnan(handles.data.proc.call(handles.data.callnum).onset)
   disp([datestr(now,'HH:MM AM') ': Need marks to edit']);
   return;
 end
@@ -459,16 +481,13 @@ if isempty(x) || ismember(13,button) %ignoring
   %   voc_status(hh,buffer_s/Fs,'X','r',.1)
 elseif ismember(27,button) %ESC
   return;
-else
-  loc=handles.data.proc.call(handles.callnum).onset;
-  handles.data.proc.call(handles.callnum).onset = ...
-    round(loc - buffer_s + x*Fs);
-  handles.data.edited=1;
-  guidata(hObject,handles);
-  
-  %   new_duration_data(vv,:) = [voc_time voc_s voc_e];
-  %   voc_status(hh,buffer_s/Fs,'OK','g',0)
 end
+loc=handles.data.proc.call(handles.data.callnum).onset;
+handles.data.proc.call(handles.data.callnum).onset = ...
+  round(loc - buffer_s + x*Fs);
+handles.data.edited=1;
+handles=check_for_advance(handles);
+guidata(hObject,handles);
 update(handles);
 
 % --- Executes on button press in mark_end_button.
@@ -476,7 +495,7 @@ function mark_end_button_Callback(hObject, eventdata, handles)
 % hObject    handle to mark_end_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if isnan(handles.data.proc.call(handles.callnum).offset)
+if isnan(handles.data.proc.call(handles.data.callnum).offset)
   disp([datestr(now,'HH:MM AM') ': Need marks to edit']);
   return;
 end
@@ -494,16 +513,13 @@ if isempty(x) || ismember(13,button) %ignoring
   %   voc_status(hh,buffer_s/Fs,'X','r',.1)
 elseif ismember(27,button) %ESC
   return;
-else
-  loc=handles.data.proc.call(handles.callnum).onset;
-  handles.data.proc.call(handles.callnum).offset = ...
-    round(loc - buffer_s + x*Fs);
-  handles.data.edited=1;
-  guidata(hObject,handles);
-  
-  %   new_duration_data(vv,:) = [voc_time voc_s voc_e];
-  %   voc_status(hh,buffer_s/Fs,'OK','g',0)
 end
+loc=handles.data.proc.call(handles.data.callnum).onset;
+handles.data.proc.call(handles.data.callnum).offset = ...
+  round(loc - buffer_s + x*Fs);
+handles.data.edited=1;
+handles=check_for_advance(handles);
+guidata(hObject,handles);
 update(handles);
 
 % --------------------------------------------------------------------
@@ -626,6 +642,7 @@ if strfind(fn,'mic_data_detect')
   
   %doing filtering once on each channel, as opposed to repeatedly doing it
   %for each call
+  disp([datestr(now,'HH:MM AM') ': Filtering data'])
   for cc=unique([handles.data.proc.call(:).channel_marked])
     waveform=handles.data.wav.sig(:,cc);
     
@@ -669,6 +686,7 @@ if strfind(fn,'mic_data_detect')
   %if durations haven't been marked already, run the automated duration
   %marking code
   if ~isfield(handles.data.proc,'dur_marked') || ~handles.data.proc.dur_marked
+    disp([datestr(now,'HH:MM AM') ': Auto-marking durations'])
     handles.data.edited=1;
     [handles.data.proc.call(:).onset]=deal(nan);
     [handles.data.proc.call(:).offset]=deal(nan);
@@ -702,8 +720,8 @@ elseif strfind(fn,'mic_data_detect') %ben's format
 end
 
 %initialize
-handles.callnum=1;
-handles.calltot=length(handles.data.proc.call);
+handles.data.callnum=1;
+handles.data.calltot=length(handles.data.proc.call);
 handles.data.fn=fn;
 set(gcf,'Name',['duration_mark: ' fname]);
 
@@ -789,7 +807,7 @@ function call_num_edit_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of call_num_edit as text
 %        str2double(get(hObject,'String')) returns contents of call_num_edit as a double
-handles.callnum=str2double(get(hObject,'String'));
+handles.data.callnum=str2double(get(hObject,'String'));
 guidata(hObject,handles);
 update(handles);
 
@@ -835,10 +853,11 @@ function delete_call_button_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 handles.data.edited=1;
-callnum=handles.callnum;
+callnum=handles.data.callnum;
 handles.data.proc.call(callnum)=[];
-handles.callnum=max(1,handles.callnum-1);
-handles.calltot=handles.calltot-1;
+handles.data.callnum=max(1,handles.data.callnum-1);
+handles.data.prev_calltot=handles.data.calltot;
+handles.data.calltot=handles.data.calltot-1;
 guidata(hObject,handles);
 update(handles);
 
@@ -864,3 +883,39 @@ function buffer_edit_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
   set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in adv_next_checkbox.
+function adv_next_checkbox_Callback(hObject, eventdata, handles)
+% hObject    handle to adv_next_checkbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of adv_next_checkbox
+
+
+% --- Executes on button press in first_pos_call_button.
+function first_pos_call_button_Callback(hObject, eventdata, handles)
+% hObject    handle to first_pos_call_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if ~isfield(handles.data,'pos_tstart')
+  disp([datestr(now,'HH:MM AM') ': No pos data to seek to.'])
+  return
+end
+
+tstart=handles.data.pos_tstart*handles.data.Fs;
+call_locs=[handles.data.proc.call(:).locs];
+indx=find(call_locs>tstart,1);
+if ~isempty(indx)
+  handles.data.callnum=indx;
+  guidata(hObject,handles);
+  update(handles)
+end
+
+
+
+
+
+
+
