@@ -87,8 +87,10 @@ voc_p=waveform(samp_s:samp_e);
 
 
 axes(handles.context_axes);
-if ~isfield(handles.data,'plot_cur_wav') && ~isfield(handles.data,'prev_chan')...
+if ~isfield(handles.data,'plots') || ...
+    ~isfield(handles.data.plots,'plot_cur_wav') && ~isfield(handles.data,'prev_chan')...
     || handles.data.prev_chan ~= cur_ch
+  handles.data.plots=[];%workaround for older versions of Matlab
   cla;
   t=(0:size(waveform,1)-1)/Fs;
   plot(t,waveform);
@@ -100,43 +102,43 @@ if ~isfield(handles.data,'plot_cur_wav') && ~isfield(handles.data,'prev_chan')..
     plot([handles.data.pos_tend handles.data.pos_tend],...
       [min(waveform) max(waveform)],'--k','linewidth',1);
   end
-elseif isfield(handles.data,'plot_cur_wav')
-  delete(handles.data.plot_cur_wav);
+elseif isfield(handles.data.plots,'plot_cur_wav')
+  delete(handles.data.plots.plot_cur_wav);
 end
-if ~isfield(handles.data,'plot_cur_wav') && ~isfield(handles.data,'prev_chan')...
+if ~isfield(handles.data.plots,'plot_cur_wav') && ~isfield(handles.data,'prev_chan')...
     || handles.data.prev_chan ~= cur_ch || ...
     isfield(handles.data,'prev_calltot') && ...
     handles.data.prev_calltot ~= handles.data.calltot
-  if isfield(handles.data,'callnumtxt')
-    delete(handles.data.callnumtxt);
+  if isfield(handles.data.plots,'callnumtxt')
+    delete(handles.data.plots.callnumtxt);
   end
-  handles.data.callnumtxt=text(call_locs./Fs,repmat(min(waveform),size(call_locs)),...
+  handles.data.plots.callnumtxt=text(call_locs./Fs,repmat(min(waveform),size(call_locs)),...
     num2str((1:length(call_locs))'),'fontsize',6,'horizontalalignment','center',...
     'verticalalignment','bottom');
 end
 
 if isfinite(onset) && isfinite(offset)
-  handles.data.plot_cur_wav=plot((onset:offset)'/Fs,...
+  handles.data.plots.plot_cur_wav=plot((onset:offset)'/Fs,...
     waveform(onset:offset),'r');
 else
-  handles.data.plot_cur_wav=plot((samp_s:samp_e)'/Fs,...
+  handles.data.plots.plot_cur_wav=plot((samp_s:samp_e)'/Fs,...
     waveform(samp_s:samp_e),'r');
 end
-if isfield(handles.data,'ch_txt_handle')
-  delete(handles.data.ch_txt_handle);
+if isfield(handles.data.plots,'ch_txt_handle')
+  delete(handles.data.plots.ch_txt_handle);
 end
-handles.data.ch_txt_handle=text(.025*size(waveform,1)/Fs,.8*range(waveform(waveform>0)),...
+handles.data.plots.ch_txt_handle=text(.025*size(waveform,1)/Fs,.8*range(waveform(waveform>0)),...
   ['ch:' num2str(cur_ch)],'fontsize',12,'color','k');
-if isfield(handles.data,'pos_txt_handle')
-  delete(handles.data.pos_txt_handle);
+if isfield(handles.data.plots,'pos_txt_handle')
+  delete(handles.data.plots.pos_txt_handle);
 end
 if isfield(handles.data,'pos_tstart')
   if ismember(call_num,indx_with_pos)
-    handles.data.pos_txt_handle=text(.975*size(waveform,1)/Fs,...
+    handles.data.plots.pos_txt_handle=text(.975*size(waveform,1)/Fs,...
       .8*range(waveform(waveform>0)),...
       'In pos file','fontsize',12,'color','b','horizontalalignment','right');
   else
-    handles.data.pos_txt_handle=text(.975*size(waveform,1)/Fs,...
+    handles.data.plots.pos_txt_handle=text(.975*size(waveform,1)/Fs,...
       .8*range(waveform(waveform>0)),...
       'Out pos file','fontsize',12,'color','r','horizontalalignment','right');
   end
@@ -163,7 +165,6 @@ set(gca,'clim',[clim_lower clim_upper]);
 %         colorbar
 hold on;
 axis tight;
-aaa=axis;
 if isfinite(onset)
   plot([buffer_s buffer_s]./Fs,[0 Fs/2],'r')
 end
@@ -581,9 +582,15 @@ else
   disp([datestr(now,'HH:MM AM') ': Couldn''t find matching position file: ' pos_fn]);
 end
 
+disp([datestr(now,'HH:MM AM') ': Loading ' fname '...']);
 handles.data.proc=load(fn);
 handles.data.edited=0;
-disp([datestr(now,'HH:MM AM') ': Loading ' fname '...']);
+
+%reset axes
+cla(handles.context_axes)
+cla(handles.wav_axes)
+cla(handles.spec_axes)
+drawnow;
 
 noise_freq=str2double(get(handles.noise_freq_edit,'String'))*1e3;
 end_freq=str2double(get(handles.end_freq_edit,'String'))*1e3;
