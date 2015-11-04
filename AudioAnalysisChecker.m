@@ -178,7 +178,7 @@ if exist([pn fn],'file')
   end
 else
   handles = load_sound_data(handles);
-  if ~isempty(find(isnan(handles.internal.DataArray),1))
+  if ~isfield(handles.internal,'DataArray') || ~isempty(find(isnan(handles.internal.DataArray),1))
     return;
   end
 end
@@ -304,15 +304,23 @@ switch button
       return;
     end
     
-    FN=fieldnames(handles.sound_data);
-    trl_FN=fieldnames(trt_data);
-    missing_FN=setdiff(FN,trl_FN);
-    for ff=1:length(missing_FN)
-      eval(['trt_data.' missing_FN{ff} '=[];']);
+    if isfield(handles,'sound_data')
+      FN=fieldnames(handles.sound_data);
+      trl_FN=fieldnames(trt_data);
+      missing_FN=setdiff(FN,trl_FN);
+      for ff=1:length(missing_FN)
+        eval(['trt_data.' missing_FN{ff} '=[];']);
+      end
+
+      handles.sound_data(end+1)=orderfields(trt_data,handles.sound_data);
+      handles.sound_data_checksum=[];
+    else
+      handles.internal.DataArray = trt_data.voc_t;
+      handles.internal.extracted_sound_data = trt_data;
+      if isfield(trt_data,'ch')
+        handles.internal.ch = trt_data.ch;
+      end
     end
-    
-    handles.sound_data(end+1)=orderfields(trt_data,handles.sound_data);
-    handles.sound_data_checksum=[];
     loaded=1;
   case 'No'
     ch=decide_channel(handles.internal.waveforms);
@@ -397,16 +405,16 @@ trt_data.trialcode=trialcode;
 trt_data.bat='';
 trt_data.voc_checked=[];
 trt_data.voc_checked_time=[];
-if isfield(handles.sound_data,'ch')
+if isfield(handles,'sound_data') && isfield(handles.sound_data,'ch')
   trt_data.ch = ch;
 else
   handles.internal.ch=ch;
 end
-if isfield(handles.sound_data,'d3_start')
+if isfield(handles,'sound_data') && isfield(handles.sound_data,'d3_start')
   trt_data.d3_start =[];
   trt_data.d3_end=[];
 end
-if isfield(handles.sound_data,'net_crossings')
+if isfield(handles,'sound_data') && isfield(handles.sound_data,'net_crossings')
   trt_data.net_crossings=[];
   trt_data.centroid=[];
   trt_data.sm_centroid=[];

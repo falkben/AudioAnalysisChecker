@@ -22,7 +22,7 @@ function varargout = duration_mark(varargin)
 
 % Edit the above text to modify the response to help duration_mark
 
-% Last Modified by GUIDE v2.5 02-Nov-2015 14:08:10
+% Last Modified by GUIDE v2.5 03-Nov-2015 14:12:03
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -161,7 +161,7 @@ imagesc(T,F,10*log10(P)); set(gca,'YDir','normal');
 clim_upper=str2double(get(handles.clim_upper_edit,'String'));
 clim_lower=str2double(get(handles.clim_lower_edit,'String'));
 set(gca,'clim',[clim_lower clim_upper]);
-%         colormap jet
+%         colormap parula
 %         colorbar
 hold on;
 axis tight;
@@ -185,7 +185,6 @@ handles.data.prev_chan=cur_ch;
 
 linkaxes([handles.wav_axes handles.spec_axes],'x');
 guidata(handles.figure1, handles)
-
 
 
 function key_press_handler(hObject, eventdata, handles)
@@ -649,7 +648,7 @@ if strfind(fn,'mic_data_detect')
   
   %doing filtering once on each channel, as opposed to repeatedly doing it
   %for each call
-  disp([datestr(now,'HH:MM AM') ': Filtering data'])
+  disp([datestr(now,'HH:MM AM') ': Filtering data...'])
   for cc=unique([handles.data.proc.call(:).channel_marked])
     waveform=handles.data.wav.sig(:,cc);
     
@@ -693,7 +692,7 @@ if strfind(fn,'mic_data_detect')
   %if durations haven't been marked already, run the automated duration
   %marking code
   if ~isfield(handles.data.proc,'dur_marked') || ~handles.data.proc.dur_marked
-    disp([datestr(now,'HH:MM AM') ': Auto-marking durations'])
+    disp([datestr(now,'HH:MM AM') ': Auto-marking durations...'])
     handles.data.edited=1;
     [handles.data.proc.call(:).onset]=deal(nan);
     [handles.data.proc.call(:).offset]=deal(nan);
@@ -919,10 +918,3 @@ if ~isempty(indx)
   guidata(hObject,handles);
   update(handles)
 end
-
-
-
-
-
-
-
