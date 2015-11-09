@@ -94,7 +94,7 @@ if nargin == 1
     setpref('audioanalysischecker','audio_pname',pathname);
   end
   
-  [filename, pathname]=uigetfile({'*.mat;*.bin'},...
+  [filename, pathname]=uigetfile({'*.mat; *.bin; *.wav'},...
     'Load audio file',[pathname '\']);
   if isequal(filename,0)
     return
@@ -363,6 +363,7 @@ switch button
 end
 
 function ch=decide_channel(data)
+ch=1;
 if size(data,2)>1
   figure(1); clf; set(gcf,'position',[8 50 400 700])
   for ch=1:size(data,2)
@@ -398,7 +399,7 @@ if isempty(ch)
   return;
 end
 
-locs=extract_vocs(data(:,ch),Fs,2,.005,2,0);
+locs=extract_vocs(data(:,ch),Fs,2,.01,2,0);
 
 trt_data.voc_t=locs./Fs - length_t;
 trt_data.trialcode=trialcode;
@@ -558,7 +559,7 @@ if get(handles.plot_spectrogram_checkbox,'value')
   imagesc(T,F,10*log10(abs(P)),[low_clim top_clim]);
   axis tight;
   a=axis;
-  axis([a(1:2) 0 125e3]);
+  axis([a(1:2) 0 Fs/2]);
   set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
     num2str((0:25:125)'),'xticklabel','');
   colormap('hot')
