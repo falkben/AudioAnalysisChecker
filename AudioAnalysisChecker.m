@@ -464,7 +464,7 @@ elseif strcmp(selected_wave_axes,'Smoothed, rectified')
   %from extract_vocs.m (in net_hole_climb_collab/analysis_ben/)
   if ~isfield(handles.internal,'filter_prop')
     [handles.internal.filter_prop.b,handles.internal.filter_prop.a] = ...
-      butter(6,30e3/(Fs/2),'high');
+      butter(6,12e3/(Fs/2),'high');
     guidata(gcbo,handles);
   end
   b = handles.internal.filter_prop.b;
@@ -726,23 +726,23 @@ end
 function zoomin_button_Callback(hObject, eventdata, handles)
 handles.samples=round(handles.samples/2);
 set(handles.sample_edit,'string',num2str(handles.samples));
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 % --- Executes on button press in zoomout_button.
 function zoomout_button_Callback(hObject, eventdata, handles)
 handles.samples=round(handles.samples*2);
 set(handles.sample_edit,'string',num2str(handles.samples));
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 
 function sample_edit_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of sample_edit as text
 %        str2double(get(hObject,'String')) returns contents of sample_edit as a double
 handles.samples=round(str2double(get(hObject,'String')));
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -758,8 +758,8 @@ handles.internal.current_voc = handles.internal.current_voc - 1;
 if handles.internal.current_voc < 1
   handles.internal.current_voc = 1;
 end
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 % --- Executes on button press in next_button.
 function next_button_Callback(hObject, eventdata, handles)
@@ -767,20 +767,20 @@ handles.internal.current_voc = handles.internal.current_voc + 1;
 if handles.internal.current_voc > length(handles.internal.DataArray)
   handles.internal.current_voc = length(handles.internal.DataArray);
 end
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 % --- Executes on button press in first_call_button.
 function first_call_button_Callback(hObject, eventdata, handles)
 handles.internal.current_voc = 1;
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 % --- Executes on button press in final_call_button.
 function final_call_button_Callback(hObject, eventdata, handles)
 handles.internal.current_voc = length(handles.internal.DataArray);
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 function voc_edit_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of voc_edit as text
@@ -791,8 +791,8 @@ if handles.internal.current_voc > length(handles.internal.DataArray)
 elseif handles.internal.current_voc < 1
   handles.internal.current_voc = 1;
 end
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 % --- Executes on button press in delete_button.
 function delete_button_Callback(hObject, eventdata, handles)
@@ -801,8 +801,8 @@ handles.internal.changed=1;
 if handles.internal.current_voc > length(handles.internal.DataArray)
   handles.internal.current_voc=length(handles.internal.DataArray);
 end
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 
 % --- Executes on button press in new_button.
@@ -819,8 +819,8 @@ if x > voc_time - buffer && x < voc_time + buffer
   handles.internal.DataArray(end+1,1)=x;
   handles.internal.DataArray = sort(handles.internal.DataArray);
   handles.internal.changed=1;
-  update(handles);
   guidata(hObject, handles);
+  update(handles);
 else
   disp('Outside displayed range');
   add_text(handles,'Outside displayed range');
@@ -840,8 +840,8 @@ function low_dB_edit_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of low_dB_edit as text
 %        str2double(get(hObject,'String')) returns contents of low_dB_edit as a double
 set(handles.lock_range_checkbox,'value',1);
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 % --- Executes during object creation, after setting all properties.
 function low_dB_edit_CreateFcn(hObject, eventdata, handles)
@@ -854,8 +854,8 @@ end
 % --- Executes on button press in lock_range_checkbox.
 function lock_range_checkbox_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of lock_range_checkbox
-update(handles);
 guidata(hObject,handles);
+update(handles);
 
 
 
@@ -863,8 +863,8 @@ function top_dB_edit_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of top_dB_edit as text
 %        str2double(get(hObject,'String')) returns contents of top_dB_edit as a double
 set(handles.lock_range_checkbox,'value',1);
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -954,29 +954,29 @@ function close_menu_Callback(hObject, eventdata, handles)
 close_GUI(handles)
 
 function plot_spectrogram_checkbox_Callback(hObject, eventdata, handles)
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 
 function plot_PI_checkbox_Callback(hObject, eventdata, handles)
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 function previous_10_button_Callback(hObject, eventdata, handles)
 handles.internal.current_voc = handles.internal.current_voc - 10;
 if handles.internal.current_voc < 1
   handles.internal.current_voc = 1;
 end
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 function next_10_button_Callback(hObject, eventdata, handles)
 handles.internal.current_voc = handles.internal.current_voc + 10;
 if handles.internal.current_voc > length(handles.internal.DataArray)
   handles.internal.current_voc = length(handles.internal.DataArray);
 end
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 
 function playbutton_Callback(hObject, eventdata, handles)
@@ -1041,8 +1041,8 @@ end
 
 
 function wave_axes_switch_Callback(hObject, eventdata, handles)
-update(handles);
 guidata(hObject, handles);
+update(handles);
 
 function wave_axes_switch_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))

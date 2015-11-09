@@ -2,8 +2,8 @@
 %min_PI, acceptable amount of time (sec) between calls
 function[locs,pks]=extract_vocs(dd,SR,thesh_mult,min_PI,echo_rem_iterations,DIAG)
 
-%remove extraneous sounds below 20k
-[b,a] = butter(6,20e3/(SR/2),'high');
+%remove extraneous sounds below 12k
+[b,a] = butter(6,12e3/(SR/2),'high');
 ddf=filtfilt(b,a,dd);
 % freqz(b,a,SR/2,SR);
 
