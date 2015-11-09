@@ -22,7 +22,7 @@ function varargout = duration_mark(varargin)
 
 % Edit the above text to modify the response to help duration_mark
 
-% Last Modified by GUIDE v2.5 03-Nov-2015 14:12:03
+% Last Modified by GUIDE v2.5 09-Nov-2015 14:51:20
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -301,7 +301,7 @@ function noise_freq_edit_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of noise_freq_edit as text
 %        str2double(get(hObject,'String')) returns contents of noise_freq_edit as a double
-
+set(handles.save_profile_button,'enable','on');
 
 % --- Executes during object creation, after setting all properties.
 function noise_freq_edit_CreateFcn(hObject, eventdata, handles)
@@ -324,7 +324,7 @@ function start_freq_edit_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of start_freq_edit as text
 %        str2double(get(hObject,'String')) returns contents of start_freq_edit as a double
-
+set(handles.save_profile_button,'enable','on');
 
 % --- Executes during object creation, after setting all properties.
 function start_freq_edit_CreateFcn(hObject, eventdata, handles)
@@ -347,6 +347,7 @@ function end_freq_edit_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of end_freq_edit as text
 %        str2double(get(hObject,'String')) returns contents of end_freq_edit as a double
+set(handles.save_profile_button,'enable','on');
 
 
 % --- Executes during object creation, after setting all properties.
@@ -361,6 +362,66 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
   set(hObject,'BackgroundColor','white');
 end
 
+
+
+
+% --- Executes on selection change in spec_profile.
+function spec_profile_Callback(hObject, eventdata, handles)
+% hObject    handle to spec_profile (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns spec_profile contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from spec_profile
+contents = cellstr(get(hObject,'String'));
+answer = contents{get(hObject,'Value')};
+load('species_profiles.mat')
+indx = find(strcmp({species_profiles.name},answer));
+load_species_profile(handles,indx,species_profiles)
+
+
+
+
+% --- Executes during object creation, after setting all properties.
+function spec_profile_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to spec_profile (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in save_profile_button.
+function save_profile_button_Callback(hObject, eventdata, handles)
+% hObject    handle to save_profile_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+answer = inputdlg('Enter species profile name','Save new profile',1);
+if isempty(answer) || isequal(answer{1},'')
+  return
+end
+load('species_profiles.mat')
+indx=find(strcmp({species_profiles.name},answer));
+if isempty(indx)
+  new_sp_prof = struct([]);
+  new_sp_prof(1).name=cell2mat(answer);
+  new_sp_prof(1).noise_freq = str2double(get(handles.noise_freq_edit,'String'));
+  new_sp_prof(1).start_freq = str2double(get(handles.start_freq_edit,'String'));
+  new_sp_prof(1).end_freq = str2double(get(handles.end_freq_edit,'String'));
+  species_profiles(end+1)=new_sp_prof;
+  indx=length(species_profiles);
+else
+  species_profiles(indx).noise_freq=str2double(get(handles.noise_freq_edit,'String'));
+  species_profiles(indx).start_freq=str2double(get(handles.start_freq_edit,'String'));
+  species_profiles(indx).end_freq=str2double(get(handles.end_freq_edit,'String'));
+end
+save('species_profiles.mat','species_profiles')
+load_species_profile(handles,indx,species_profiles);
+set(handles.save_profile_button,'enable','off');
 
 % --- Executes on button press in nav_next_button.
 function nav_next_button_Callback(hObject, eventdata, handles)
@@ -726,14 +787,28 @@ elseif strfind(fn,'mic_data_detect') %ben's format
 end
 
 %initialize
-handles.data.callnum=1;
-handles.data.calltot=length(handles.data.proc.call);
 handles.data.fn=fn;
 set(gcf,'Name',['duration_mark: ' fname]);
+handles.data.callnum=1;
+handles.data.calltot=length(handles.data.proc.call);
+
+load('species_profiles.mat')
+indx=get(handles.spec_profile,'value');
+load_species_profile(handles,indx,species_profiles);
 
 disp([datestr(now,'HH:MM AM') ': --- Loaded'])
 guidata(hObject, handles);
 update(handles);
+
+function load_species_profile(handles,indx,species_profiles)
+%species profiles
+sp_prof=species_profiles(indx);
+set(handles.noise_freq_edit,'string',num2str(sp_prof.noise_freq));
+set(handles.start_freq_edit,'string',num2str(sp_prof.start_freq));
+set(handles.end_freq_edit,'string',num2str(sp_prof.end_freq));
+set(handles.spec_profile,'string',{species_profiles.name});
+set(handles.spec_profile,'value',indx);
+set(handles.save_profile_button,'enable','off');
 
 
 

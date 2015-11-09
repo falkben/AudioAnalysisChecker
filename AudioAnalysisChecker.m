@@ -68,6 +68,7 @@ set(handles.save_menu,'enable','off');
 set(handles.save_open_next,'enable','off');
 set(handles.wave_axes_switch,'enable','off');
 set_sound_data_path(handles);
+addpath(cd)
 
 function set_sound_data_path(handles)
 if ispref('audioanalysischecker','sound_data_pname')
