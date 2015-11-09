@@ -463,7 +463,7 @@ if strcmp(selected_wave_axes,'Waveform')
 elseif strcmp(selected_wave_axes,'Smoothed, rectified')
   %from extract_vocs.m (in net_hole_climb_collab/analysis_ben/)
   if ~isfield(handles.internal,'filter_prop')
-    [handles.internal.filter_prop.b handles.internal.filter_prop.a] = ...
+    [handles.internal.filter_prop.b,handles.internal.filter_prop.a] = ...
       butter(6,30e3/(Fs/2),'high');
     guidata(gcbo,handles);
   end
@@ -538,30 +538,27 @@ end
 %plotting spectrogram:
 axes(handles.spect_axes);cla;
 if get(handles.plot_spectrogram_checkbox,'value')
-  %we do the spectrogram over all the frequencies and then just set the axis limit to 125khz
+  %we do the spectrogram over all the frequencies and set axis lim. to nyquist
 %   [~,F,T,P] = spectrogram(X,256,230,linspace(0,125e3,60),Fs); %slower alg.
-  [~,F,T,P] = spectrogram(X,256,230,[],Fs);
+  [~,F,T,P] = spectrogram(X,256,230,1e3,Fs);
   
   %worrying about the clim for the spectrogram:
   max_db_str=num2str(round(max(max(10*log10(P)))));
   min_db_str=num2str(round(min(min(10*log10(P)))));
   set(handles.max_dB_text,'string',max_db_str);
   set(handles.min_dB_text,'string',min_db_str);
-  if get(handles.lock_range_checkbox,'value') == 1
-    low_clim=str2double(get(handles.low_dB_edit,'string'));
-    top_clim=str2double(get(handles.top_dB_edit,'string'));
-%     set(gca,'clim',[low_clim top_clim]);
-  else
+  if get(handles.lock_range_checkbox,'value') ~= 1
     set(handles.top_dB_edit,'string',max_db_str);
     set(handles.low_dB_edit,'string',min_db_str);
   end
-  
+  low_clim=str2double(get(handles.low_dB_edit,'string'));
+  top_clim=str2double(get(handles.top_dB_edit,'string'));
   imagesc(T,F,10*log10(abs(P)),[low_clim top_clim]);
   axis tight;
   a=axis;
   axis([a(1:2) 0 Fs/2]);
-  set(gca,'YDir','normal','ytick',(0:25:125).*1e3,'yticklabel',...
-    num2str((0:25:125)'),'xticklabel','');
+  set(gca,'YDir','normal','ytick',linspace(0,Fs/2,6),'yticklabel',...
+    linspace(0,Fs/2,6)/1e3,'xticklabel','');
   colormap('hot')
 end
 
@@ -811,7 +808,7 @@ guidata(hObject, handles);
 % --- Executes on button press in new_button.
 function new_button_Callback(hObject, eventdata, handles)
 axes(handles.wave_axes);
-[x,y] = ginput(1);
+[x,~] = ginput(1);
 voc_time = handles.internal.DataArray(handles.internal.current_voc);
 buffer=handles.samples/2/handles.internal.Fs;
 if isempty(handles.internal.current_voc)
