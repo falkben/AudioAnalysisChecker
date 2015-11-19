@@ -146,18 +146,18 @@ end
 
 
 axes(handles.wav_axes);
-plot((1:length(voc_p))./Fs,voc_p);
+plot((1:length(voc_p))./Fs - buffer_s/Fs,voc_p);
 hold on;
 if isfinite(onset)
-  plot([buffer_s buffer_s]./Fs,[min(voc_p) max(voc_p)],'r')
+  plot([0 0]./Fs,[min(voc_p) max(voc_p)],'r')
 end
-plot([buffer_s+offset-onset buffer_s+offset-onset]./Fs,...
+plot([0+offset-onset 0+offset-onset]./Fs,...
   [min(voc_p) max(voc_p)],'r')
 axis tight; hold off;
 
 axes(handles.spec_axes);
 [~,F,T,P] = spectrogram(voc_p,128,120,512,Fs);
-imagesc(T,F,10*log10(P)); set(gca,'YDir','normal');
+imagesc(T-buffer_s/Fs,F,10*log10(P)); set(gca,'YDir','normal');
 clim_upper=str2double(get(handles.clim_upper_edit,'String'));
 clim_lower=str2double(get(handles.clim_lower_edit,'String'));
 set(gca,'clim',[clim_lower clim_upper]);
@@ -166,17 +166,17 @@ set(gca,'clim',[clim_lower clim_upper]);
 hold on;
 axis tight;
 if isfinite(onset)
-  plot([buffer_s buffer_s]./Fs,[0 Fs/2],'r')
+  plot([0 0]./Fs,[0 Fs/2],'r')
 end
-plot([buffer_s+offset-onset buffer_s+offset-onset]./Fs,...
+plot([0+offset-onset 0+offset-onset]./Fs,...
   [0 Fs/2],'r')
 hold off;
 if call_num > 1 && PI(call_num-1)<10
-  text(buffer_s/3/Fs,Fs/2*.9,'BUZZ','fontsize',18,'color','r')
+  text(0,Fs/2*.9,'BUZZ','fontsize',18,'color','r')
 end
 if isfield(handles.data,'pos_tstart')
   if ~ismember(call_num,indx_with_pos)
-    text((samp_e-samp_s-buffer_s/2)/Fs,Fs/2*.9,...
+    text(T(end)-buffer_s/Fs,Fs/2*.9,...
       'Out pos file','fontsize',12,'color','r','horizontalalignment','right');
   end
 end
@@ -660,7 +660,17 @@ start_freq=str2double(get(handles.start_freq_edit,'String'))*1e3;
 if strfind(fn,'mic_data_detect')
   A=strsplit(fn,'_detect');
   data_fname=A{1};
-  handles.data.wav=load([data_fname '.mat']);
+  if exist([data_fname '.mat'],'file')
+    handles.data.wav=load([data_fname '.mat']);
+  else
+    pname_mic_data = uigetdir(pname,'specify mic_data directory');
+    if isequal(pname_mic_data,0)
+      return;
+    end
+    A=strsplit(fname,'_detect');
+    data_fname=A{1};
+    handles.data.wav=load([pname_mic_data '\' data_fname '.mat']);
+  end
   
   Fs=handles.data.wav.fs;
   handles.data.Fs=Fs;
