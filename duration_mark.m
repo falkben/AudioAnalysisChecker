@@ -504,15 +504,15 @@ end
 
 if isnan(handles.data.proc.call(handles.data.callnum).onset)
   loc=handles.data.proc.call(handles.data.callnum).locs;
-  buffer_mult=2;
+  buffer_mult=1;
 else
   loc=handles.data.proc.call(handles.data.callnum).onset;
-  buffer_mult=1;
+  buffer_mult=0;
 end
 handles.data.proc.call(handles.data.callnum).onset = ...
-  round(loc - buffer_s*buffer_mult + x(1)*Fs);
+  round(loc -buffer_mult*buffer_s + x(1)*Fs);
 handles.data.proc.call(handles.data.callnum).offset = ...
-  round(loc - buffer_s*buffer_mult + x(2)*Fs);
+  round(loc -buffer_mult*buffer_s + x(2)*Fs);
 handles.data.edited=1;
 handles=check_for_advance(handles);
 guidata(hObject,handles);
@@ -533,7 +533,6 @@ axes(handles.wav_axes);
 
 Fs=handles.data.wav.fs;
 buffer=str2double(get(handles.buffer_edit,'String'));
-buffer_s = round((buffer * 1e-3)*Fs);
 
 [x,~,button]=ginput(1);
 if isempty(x) || ismember(13,button) %ignoring
@@ -545,7 +544,7 @@ elseif ismember(27,button) %ESC
 end
 loc=handles.data.proc.call(handles.data.callnum).onset;
 handles.data.proc.call(handles.data.callnum).onset = ...
-  round(loc - buffer_s + x*Fs);
+  round(loc + x*Fs);
 handles.data.edited=1;
 handles=check_for_advance(handles);
 guidata(hObject,handles);
@@ -565,7 +564,6 @@ axes(handles.wav_axes);
 
 Fs=handles.data.wav.fs;
 buffer=str2double(get(handles.buffer_edit,'String'));
-buffer_s = round((buffer * 1e-3)*Fs);
 
 [x,~,button]=ginput(1);
 if isempty(x) || ismember(13,button) %ignoring
@@ -577,7 +575,7 @@ elseif ismember(27,button) %ESC
 end
 loc=handles.data.proc.call(handles.data.callnum).onset;
 handles.data.proc.call(handles.data.callnum).offset = ...
-  round(loc - buffer_s + x*Fs);
+  round(loc + x*Fs);
 handles.data.edited=1;
 handles=check_for_advance(handles);
 guidata(hObject,handles);
