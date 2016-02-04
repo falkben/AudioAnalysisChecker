@@ -625,9 +625,17 @@ if isequal(pos_pname,0)
   return;
 end
 setpref('duration_mark_gui','viconrecpath',pos_pname)
-pos_fn=get_vicon_trialcode_from_data_detect(fname);
 
 handles.data=[];
+disp([datestr(now,'HH:MM AM') ': Loading ' fname '...']);
+handles.data.proc=load(fn);
+handles.data.edited=0;
+
+if isfield(handles.data.proc,'bat_pos_fn')
+  pos_fn=handles.data.proc.bat_pos_fn;
+else
+  pos_fn=get_vicon_trialcode_from_data_detect(fname);
+end
 
 if exist([pos_pname '\' pos_fn],'file')
   load([pos_pname '\' pos_fn])
@@ -639,10 +647,6 @@ if exist([pos_pname '\' pos_fn],'file')
 else
   disp([datestr(now,'HH:MM AM') ': Couldn''t find matching position file: ' pos_fn]);
 end
-
-disp([datestr(now,'HH:MM AM') ': Loading ' fname '...']);
-handles.data.proc=load(fn);
-handles.data.edited=0;
 
 %reset axes
 cla(handles.context_axes)
