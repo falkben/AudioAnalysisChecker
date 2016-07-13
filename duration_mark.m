@@ -640,12 +640,31 @@ end
 if exist([pos_pname '\' pos_fn],'file')
   load([pos_pname '\' pos_fn])
   if ~exist('frame_rate','var')
-    frame_rate=200;
+    x = inputdlg('Frame rate:','Enter frame rate',[1 50]);
+    if ~isempty(x)
+      frame_rate = str2num(x{:}); 
+    else
+      frame_rate = 100;
+    end
   end
   handles.data.pos_tstart=find(isfinite(bat_pos{1}(:,1)),1)/frame_rate;
   handles.data.pos_tend=find(isfinite(bat_pos{1}(:,1)),1,'last')/frame_rate;
 else
   disp([datestr(now,'HH:MM AM') ': Couldn''t find matching position file: ' pos_fn]);
+  [pos_fn,pos_pname]=uigetfile([pos_pname '\' pos_fn],'Pick position file');
+  if exist([pos_pname '\' pos_fn],'file')
+    load([pos_pname '\' pos_fn])
+    if ~exist('frame_rate','var')
+      x = inputdlg('Frame rate:','Enter frame rate',[1 50]);
+      if ~isempty(x)
+        frame_rate = str2num(x{:}); 
+      else
+        frame_rate = 100;
+      end
+    end
+    handles.data.pos_tstart=find(isfinite(bat_pos{1}(:,1)),1)/frame_rate;
+    handles.data.pos_tend=find(isfinite(bat_pos{1}(:,1)),1,'last')/frame_rate;
+  end
 end
 
 %reset axes
