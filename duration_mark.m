@@ -22,7 +22,7 @@ function varargout = duration_mark(varargin)
 
 % Edit the above text to modify the response to help duration_mark
 
-% Last Modified by GUIDE v2.5 09-Nov-2015 14:51:20
+% Last Modified by GUIDE v2.5 22-Aug-2016 12:28:48
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -587,32 +587,34 @@ function filemenu_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
-% --------------------------------------------------------------------
-function loadfile_Callback(hObject, eventdata, handles)
-% hObject    handle to loadfile (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
+function load_file(handles,hObject,reload)
 %determine if they want to save current file first
 if save_before_discard(handles)
   return;
 end
 
-%determine the type of file (wu-jung's mic_data_detect or my _processed file)
-if ispref('duration_mark_gui') && ispref('duration_mark_gui','micrecpath')
-  pname=getpref('duration_mark_gui','micrecpath');
+if reload
+  %use the same pname and fname as original file in handles
+  fn = handles.data.fn;
+  [pname,fname,ext] = fileparts(fn);
+  fname =[fname,ext];
 else
-  pname='';
+  %determine the type of file (wu-jung's mic_data_detect or my _processed file)
+  if ispref('duration_mark_gui') && ispref('duration_mark_gui','micrecpath')
+    pname=getpref('duration_mark_gui','micrecpath');
+  else
+    pname='';
+  end
+  [fname,pname]=uigetfile({'*mic_data_detect.mat','Wu-Jung''s format';...
+    '*_processed.mat','Ben''s format';...
+    '*.mat','Mat files'},[],pname);
+  if isequal(fname,0)
+    return;
+  end
+  fn=[pname,fname];
+  setpref('duration_mark_gui','micrecpath',pname)
 end
-[fname,pname]=uigetfile({'*mic_data_detect.mat','Wu-Jung''s format';...
-  '*_processed.mat','Ben''s format';...
-  '*.mat','Mat files'},[],pname);
-if isequal(fname,0)
-  return;
-end
-fn=[pname,fname];
-setpref('duration_mark_gui','micrecpath',pname)
+
 
 %load in the vicon data for trial start and end times
 if ispref('duration_mark_gui') && ispref('duration_mark_gui','viconrecpath')
@@ -721,7 +723,8 @@ if strfind(fn,'mic_data_detect')
     used_vocs = intersect(used_vocs, indx_with_pos);
   end
   
-  if ~isfield(handles.data.proc,'dur_marked') || ~handles.data.proc.dur_marked
+  if (~isfield(handles.data.proc,'dur_marked') || ~handles.data.proc.dur_marked) && ...
+      get(handles.use_SNR_radiobutton,'value')
     handles.data.edited=1;
     %determining the max sig on each channel and only processing those
     %channels of recordings
@@ -736,7 +739,6 @@ if strfind(fn,'mic_data_detect')
       handles.data.proc.call(vv).channel_marked=cc;
     end
   end
-  
   
   %doing filtering once on each channel, as opposed to repeatedly doing it
   %for each call
@@ -830,6 +832,15 @@ load_species_profile(handles,indx,species_profiles);
 disp([datestr(now,'HH:MM AM') ': --- Loaded'])
 guidata(hObject, handles);
 update(handles);
+
+
+% --------------------------------------------------------------------
+function loadfile_Callback(hObject, eventdata, handles)
+% hObject    handle to loadfile (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+load_file(handles,hObject,0)
+
 
 function load_species_profile(handles,indx,species_profiles)
 %species profiles
@@ -1024,3 +1035,11 @@ if ~isempty(indx)
   guidata(hObject,handles);
   update(handles)
 end
+
+
+% --- Executes on button press in reload_button.
+function reload_button_Callback(hObject, eventdata, handles)
+% hObject    handle to reload_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+load_file(handles,hObject,1)
