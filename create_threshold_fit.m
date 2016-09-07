@@ -20,101 +20,177 @@ else
   end
 end
 
-base='F:\eptesicus_forest_collab\lasse_forest_exploration\';
-addpath(base);
+% base='F:\eptesicus_forest_collab\lasse_forest_exploration\';
+% addpath(base);
 
 allthresh1=[];
 allthresh2=[];
 allI=[];
 
 for k=1:length(data_folders)
-  dur_files=dir([data_folders{k} '\*duration.mat']);
-  load([data_folders{k} '\' dur_files(1).name]);
-  dots=strfind(trial_data.trialcode,'.');
-  %to properly load the data files, adjust for different file locations
-  [~,~,~,~,~,~,~,~,~,~,wavebook_path]=...
-    return_processed_file_names(trial_data.bat,...
-    str2double(trial_data.trialcode(dots(1)+1:dots(1)+4)));
-  afiles=dir([base wavebook_path '*.bin']);
-  
-  thresh1=cell(length(dur_files),1);
-  thresh2=cell(length(dur_files),1);
-  I=cell(length(dur_files),1);
-  for g=1:length(dur_files)
-    load([data_folders{k} '\' dur_files(g).name]);
-    if trial_data.manual_additions
-      afname=[dur_files(g).name(1:end-23) '.bin'];
-      ii=find(~cellfun(@isempty,strfind({afiles.name},afname)));
-      if ~isempty(ii)
-        afullname = ([base wavebook_path afiles(ii).name]);
+  if isempty(dir([data_folders{k} '\*duration.mat']))
+    dur_files=dir([data_folders{k} '\*data_detect.mat']);
+    
+    
+    thresh1=cell(length(dur_files),1);
+    thresh2=cell(length(dur_files),1);
+    I=cell(length(dur_files),1);
+    for g=1:length(dur_files)
+      trial_data = load([data_folders{k} '\' dur_files(g).name]);
+      if trial_data.dur_marked
+        afname = strrep(dur_files(g).name,'_detect','');
         
-        %load in the audio files
-        [fd,h,c] = OpenIoTechBinFile(afullname);
-        Fs = h.preFreq;
-        pretrig_t = h.PreCount/Fs;
-        waveforms = ReadChnlsFromFile(fd,h,c,pretrig_t*Fs+.2*Fs,1);
-        waveform = waveforms{trial_data.ch};
+        load([data_folders{k} '\' afname])
         
-        [b,a] = butter(6,12e3/(Fs/2),'high');
+        waveform = sig(:,trial_data.chsel);
+        
+        [b,a] = butter(6,12e3/(fs/2),'high');
         ddf=filtfilt(b,a,waveform);
         data_square = smooth((ddf.^2),100);
         
-        [low_b, low_a]=butter(6,30e3/(Fs/2),'high');
+        [low_b, low_a]=butter(6,30e3/(fs/2),'high');
         waveform_high=filtfilt(low_b,low_a,waveform);
         data_square_high=smooth((waveform_high.^2),100);
         
-        [low_b, low_a]=butter(6,30e3/(Fs/2),'low');
+        [low_b, low_a]=butter(6,30e3/(fs/2),'low');
         waveform_low=filtfilt(low_b,low_a,ddf);
         data_square_low=smooth((waveform_low.^2),100);
         
-        onsets=trial_data.duration_data_audit(:,2);
-        offsets=trial_data.duration_data_audit(:,3);
+        onsets=[trial_data.call.call_start_idx];
+        offsets=[trial_data.call.call_end_idx];
         
         pk=nan(length(onsets),1);
         val_s=nan(length(onsets),1);
         val_e=nan(length(onsets),1);
-        for vv=1:length(onsets)
-          if ~isnan(onsets(vv))
+        for vv=find(isfinite(onsets))'
           buff=1e2;
-          starts=round((onsets(vv)+pretrig_t)*Fs);
-          stops=round((offsets(vv)+pretrig_t)*Fs);
+          starts=onsets(vv);
+          stops=offsets(vv);
           locs=buff;
           loce=buff+(stops-starts+1);
-          
+
           pk(vv)=max(data_square(max(1,starts-buff):min(stops+buff,length(data_square))));
           val_s(vv)=data_square_high(starts);
           val_e(vv)=data_square_low(stops);
-          
+
           if DIAG
             figure(1);clf;
             subplot(3,1,1)
             plot(waveform(starts-buff:stops+buff));
             hold on;
             plot([locs loce],[0 0],'*g');
-            
+
             subplot(3,1,2)
             plot(data_square_high(starts-buff:stops+buff));
             hold on;
-            plot(locs,data_square_high(locs),'*g');
-            
+            plot(locs,data_square_high(starts-buff+locs),'*g');
+
             subplot(3,1,3)
             plot(data_square_low(starts-buff:stops+buff));
             hold on;
-            plot(loce,data_square_low(loce),'*g');
-          end
+            plot(loce,data_square_low(starts-buff+loce),'*g');
           end
         end
       end
+      
+      thresh1{g}=val_s(~isnan(val_s));
+      thresh2{g}=val_e(~isnan(val_e));
+      I{g}=pk(~isnan(val_e));
     end
+    allthresh1=[allthresh1; cell2mat(thresh1)];
+    allthresh2=[allthresh2; cell2mat(thresh2)];
+    allI=[allI; cell2mat(I)];
+  else
+    dur_files=dir([data_folders{k} '\*duration.mat']);
+    load([data_folders{k} '\' dur_files(1).name]);
+    dots=strfind(trial_data.trialcode,'.');
+    %to properly load the data files, adjust for different file locations
+    [~,~,~,~,~,~,~,~,~,~,wavebook_path]=...
+      return_processed_file_names(trial_data.bat,...
+      str2double(trial_data.trialcode(dots(1)+1:dots(1)+4)));
+    afiles=dir([base wavebook_path '*.bin']);
     
-    thresh1{g}=val_s(~isnan(val_s));
-    thresh2{g}=val_e(~isnan(val_e));
-    I{g}=pk(~isnan(val_e));
+    thresh1=cell(length(dur_files),1);
+    thresh2=cell(length(dur_files),1);
+    I=cell(length(dur_files),1);
+    for g=1:length(dur_files)
+      load([data_folders{k} '\' dur_files(g).name]);
+      if trial_data.manual_additions
+        afname=[dur_files(g).name(1:end-23) '.bin'];
+        ii=find(~cellfun(@isempty,strfind({afiles.name},afname)));
+        if ~isempty(ii)
+          afullname = ([base wavebook_path afiles(ii).name]);
+          
+          %load in the audio files
+          [fd,h,c] = OpenIoTechBinFile(afullname);
+          Fs = h.preFreq;
+          pretrig_t = h.PreCount/Fs;
+          waveforms = ReadChnlsFromFile(fd,h,c,pretrig_t*Fs+.2*Fs,1);
+          waveform = waveforms{trial_data.ch};
+          
+          [b,a] = butter(6,12e3/(Fs/2),'high');
+          ddf=filtfilt(b,a,waveform);
+          data_square = smooth((ddf.^2),100);
+          
+          [low_b, low_a]=butter(6,30e3/(Fs/2),'high');
+          waveform_high=filtfilt(low_b,low_a,waveform);
+          data_square_high=smooth((waveform_high.^2),100);
+          
+          [low_b, low_a]=butter(6,30e3/(Fs/2),'low');
+          waveform_low=filtfilt(low_b,low_a,ddf);
+          data_square_low=smooth((waveform_low.^2),100);
+          
+          onsets=trial_data.duration_data_audit(:,2);
+          offsets=trial_data.duration_data_audit(:,3);
+          
+          pk=nan(length(onsets),1);
+          val_s=nan(length(onsets),1);
+          val_e=nan(length(onsets),1);
+          for vv=1:length(onsets)
+            if ~isnan(onsets(vv))
+              buff=1e2;
+              starts=round((onsets(vv)+pretrig_t)*Fs);
+              stops=round((offsets(vv)+pretrig_t)*Fs);
+              locs=buff;
+              loce=buff+(stops-starts+1);
+              
+              pk(vv)=max(data_square(max(1,starts-buff):min(stops+buff,length(data_square))));
+              val_s(vv)=data_square_high(starts);
+              val_e(vv)=data_square_low(stops);
+              
+              if DIAG
+                figure(1);clf;
+                subplot(3,1,1)
+                plot(waveform(starts-buff:stops+buff));
+                hold on;
+                plot([locs loce],[0 0],'*g');
+                
+                subplot(3,1,2)
+                plot(data_square_high(starts-buff:stops+buff));
+                hold on;
+                plot(locs,data_square_high(locs),'*g');
+                
+                subplot(3,1,3)
+                plot(data_square_low(starts-buff:stops+buff));
+                hold on;
+                plot(loce,data_square_low(loce),'*g');
+              end
+            end
+          end
+        end
+      end
+      
+      thresh1{g}=val_s(~isnan(val_s));
+      thresh2{g}=val_e(~isnan(val_e));
+      I{g}=pk(~isnan(val_e));
+    end
+    allthresh1=[allthresh1; cell2mat(thresh1)];
+    allthresh2=[allthresh2; cell2mat(thresh2)];
+    allI=[allI; cell2mat(I)];
   end
-  allthresh1=[allthresh1; cell2mat(thresh1)];
-  allthresh2=[allthresh2; cell2mat(thresh2)];
-  allI=[allI; cell2mat(I)];
+  
 end
+
 
 outliers1=allthresh1 > 10*std(allthresh1);
 [p1,S] = polyfit(allI(~outliers1),allthresh1(~outliers1),2);
@@ -143,4 +219,4 @@ if DIAG
   plot(xx,yy,'r');
 end
 
-save('duration_threshold_fit.mat','pk_vs_thresh1','pk_vs_thresh2');
+save([data_folders{k} '\' 'duration_threshold_fit.mat'],'pk_vs_thresh1','pk_vs_thresh2');

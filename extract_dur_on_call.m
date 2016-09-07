@@ -30,7 +30,7 @@ thresh_high_noise = noise_diff_high*10;
 thresh_low_noise = noise_diff_low*10;
 
 if DIAG || manual
-  figure(1); clf;
+  figure(1); clf; set(gcf,'pos',[186   657 560 420]);
 
   hh(1)=subplot(3,1,1); cla;
   plot((1:length(voc))./Fs,voc);
@@ -38,12 +38,13 @@ if DIAG || manual
   aa=axis;
 
   hh(2)=subplot(3,1,2); cla;
-  [~,F,T,P] = spectrogram(voc,128,120,512,Fs);
+  [~,F,T,P] = spectrogram(voc,82,80,256,Fs);
   imagesc(T,F,10*log10(P)); set(gca,'YDir','normal');
   set(gca,'clim',[-95 -45]);
   axis tight;
   aaa=axis;
   axis([aa(1:2) aaa(3:4)]);
+  colormap hot
 
   Mhigh=max(data_square_high_voc(1:loc));
   Mlow=max(data_square_low_voc(loc:end));
@@ -62,7 +63,7 @@ if DIAG || manual
 
   Mdiffhigh=max(smooth_der_voc_high(1:loc));
   Mdifflow=max(smooth_der_voc_low(loc:end));
-  figure(2); clf;
+  figure(2); clf; set(gcf,'pos',[187 141 560 420]);
   plot((1:loc)./Fs,...
     smooth_der_voc_high(1:loc)./Mdiffhigh);
   hold on;
@@ -75,7 +76,7 @@ if DIAG || manual
     [Mdiffhigh Mdiffhigh Mdifflow Mdifflow],'g');
 end
 
-if ~manual && pk > .005
+if ~manual && pk > .0025
   try
     [voc_s,thresh1, thresh_high_noise]=...
       find_thresh_crossing(data_square_high_voc(1:loc),...

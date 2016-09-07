@@ -22,7 +22,7 @@ function varargout = duration_mark(varargin)
 
 % Edit the above text to modify the response to help duration_mark
 
-% Last Modified by GUIDE v2.5 22-Aug-2016 12:28:48
+% Last Modified by GUIDE v2.5 07-Sep-2016 13:55:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -156,7 +156,7 @@ plot([0+offset-onset 0+offset-onset]./Fs,...
 axis tight; hold off;
 
 axes(handles.spec_axes);
-[~,F,T,P] = spectrogram(voc_p,128,120,512,Fs);
+[~,F,T,P] = spectrogram(voc_p,82,80,256,Fs);
 imagesc(T-buffer_s/Fs,F,10*log10(P)); set(gca,'YDir','normal');
 clim_upper=str2double(get(handles.clim_upper_edit,'String'));
 clim_lower=str2double(get(handles.clim_lower_edit,'String'));
@@ -743,19 +743,20 @@ if strfind(fn,'mic_data_detect')
   %doing filtering once on each channel, as opposed to repeatedly doing it
   %for each call
   disp([datestr(now,'HH:MM AM') ': Filtering data...'])
+  sm_amount=100;
   for cc=unique([handles.data.proc.call(:).channel_marked])
     waveform=handles.data.wav.sig(:,cc);
     
     ddf=handles.data.filt_wav_noise{cc};
-    data_square = smooth((ddf.^2),100);
+    data_square = smooth((ddf.^2),sm_amount);
     
     %for marking the end time
     waveform_low=filtfilt(low_b,low_a,ddf); %using the previously high passed data
-    data_square_low=smooth((waveform_low.^2),100);
+    data_square_low=smooth((waveform_low.^2),sm_amount);
     
     %for marking the start time
     waveform_high=filtfilt(high_b,high_a,waveform); %just high pass it once time
-    data_square_high=smooth((waveform_high.^2),100);
+    data_square_high=smooth((waveform_high.^2),sm_amount);
     
     noise_length = .001*Fs; %length of data for estimating noise (1ms)
     
@@ -785,7 +786,8 @@ if strfind(fn,'mic_data_detect')
   
   %if durations haven't been marked already, run the automated duration
   %marking code
-  if ~isfield(handles.data.proc,'dur_marked') || ~handles.data.proc.dur_marked
+  if ~isfield(handles.data.proc,'dur_marked') || ~handles.data.proc.dur_marked ||...
+    (reload && get(handles.duration_ID_checkbox,'Value') ) %this is a full preprocess job
     disp([datestr(now,'HH:MM AM') ': Auto-marking durations...'])
     handles.data.edited=1;
     [handles.data.proc.call(:).onset]=deal(nan);
@@ -795,13 +797,14 @@ if strfind(fn,'mic_data_detect')
       loc=handles.data.proc.call(vv).locs;
       cc=handles.data.proc.call(vv).channel_marked;
       
+      DIAG=0;
       [handles.data.proc.call(vv).onset,handles.data.proc.call(vv).offset]=...
         extract_dur_on_call(loc,Fs,...
         handles.data.filt_wav_noise{cc},handles.data.filt_wav_start{cc},...
         handles.data.filt_wav_end{cc},handles.data.noise_high{cc},...
         handles.data.noise_low{cc},handles.data.data_square{cc},...
         handles.data.data_square_high{cc},handles.data.data_square_diff_high{cc},...
-        handles.data.data_square_low{cc},handles.data.data_square_diff_low{cc},0,0);
+        handles.data.data_square_low{cc},handles.data.data_square_diff_low{cc},0,DIAG);
       if ~isnan(handles.data.proc.call(vv).onset)
         handles.data.proc.call(vv).locs=loc;
         handles.data.proc.call(vv).channel_marked=cc;
@@ -1043,3 +1046,12 @@ function reload_button_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 load_file(handles,hObject,1)
+
+
+% --- Executes on button press in duration_ID_checkbox.
+function duration_ID_checkbox_Callback(hObject, eventdata, handles)
+% hObject    handle to duration_ID_checkbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of duration_ID_checkbox
